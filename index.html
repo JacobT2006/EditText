@@ -2,48 +2,148 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'"/>
-    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unix Notes</title>
     <link rel="stylesheet" href="styleIndex.css">
-    
-    <!-- title bar -->
-    <div class="title-bar">
-    
-    </div>
 </head>
 <body>
     <div class="app">
-        <!-- Menu items -->
-        <div class="window-controls">
-            <button id="close-btn" class="control-btn close"></button>
-            <button id="minimize-btn" class="control-btn minimize"></button>
-            <button id="maximize-btn" class="control-btn maximize"></button>
-        </div>
-        <!-- Activity bar -->
-        <div class="activity-bar">
-            <!-- Activity bar items -->
-            
-            <svg class="active-activity-icon" src="Assets/file_copy.svg"></svg>
-            
-            <svg class="activity-icon three" id="createFileButton" src="Assets/plus.svg"></svg>
+        <header class="title-bar" title="Application title bar">
+            <span class="title" title="Plain-text notes app">Unix Notes</span>
+            <div class="window-controls">
+                <button id="close-btn" class="control-btn close" type="button" aria-label="Close window" title="Close current window"></button>
+                <button id="minimize-btn" class="control-btn minimize" type="button" aria-label="Minimize window" title="Minimize current window"></button>
+                <button id="maximize-btn" class="control-btn maximize" type="button" data-maximize-action="expand" aria-label="Expand window" title="Expand window"></button>
+            </div>
+            <div class="file-menu">
+                <button id="file-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open File menu" title="Open File menu">File</button>
+                <div id="file-menu" class="file-menu-items" hidden>
+                    <button type="button" data-command="new" title="Create a new note">New Note <span>⌘/Ctrl+N</span></button>
+                    <button type="button" data-command="open" title="Open existing text files">Open… <span>⌘/Ctrl+O</span></button>
+                    <hr>
+                    <button id="menu-auto-save" type="button" role="menuitemcheckbox" aria-checked="false" data-command="toggle-auto-save" title="Toggle automatic saving">
+                        <span>Auto Save</span>
+                        <span class="menu-check" aria-hidden="true">✓</span>
+                    </button>
+                    <hr>
+                    <button type="button" data-command="save" title="Save current note">Save <span>⌘/Ctrl+S</span></button>
+                    <button type="button" data-command="save-as" title="Save to another file">Save As… <span>⌘/Ctrl+Shift+S</span></button>
+                    <hr>
+                    <button type="button" data-command="settings" title="Change app preferences">Settings…</button>
+                </div>
+            </div>
+        </header>
 
-            <svg class="activity-icon one" src="Assets/document_search.svg"></svg>
+        <div class="workspace">
+            <nav class="activity-bar" aria-label="Actions" title="Quick note actions">
+                <button class="active-activity-icon" type="button" aria-label="Notes explorer" title="Notes explorer" disabled></button>
+                <button class="activity-icon three" id="new-note" type="button" aria-label="New note" title="Create a new note"></button>
+                <button class="activity-icon one" id="find-note" type="button" aria-label="Find in note" title="Find text in note"></button>
+                <button class="activity-icon open-file" id="open-file" type="button" aria-label="Open text file" title="Open text file"></button>
+                <button class="activity-icon two" id="quitButton" type="button" aria-label="Close window" title="Close current window"></button>
+            </nav>
 
-            <svg class="activity-icon two" src="Assets/quit.svg"></svg>
-        </div>
-        
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <!-- Sidebar items -->
-            <div class="sidebar-resizer"></div>
-        </div>
+            <aside class="explorer" aria-label="Explorer" title="Open notes and history">
+                <div class="explorer-title" title="Browse open notes">EXPLORER</div>
+                <details class="explorer-section open-editors-section" open title="Manage open notes">
+                    <summary class="section-heading" title="Show or hide open notes">
+                        <span>OPEN EDITORS</span>
+                        <button id="new-tab" type="button" aria-label="New note" title="Create a new note"></button>
+                    </summary>
+                    <div class="open-editors-content" title="Scroll through open notes">
+                        <div id="tabs" role="tablist" aria-label="Open editors" title="Select or reorder open notes"></div>
+                        <p id="empty-editors" title="Open a file or create a note">No open editors</p>
+                    </div>
+                </details>
+                <div class="explorer-bottom">
+                    <details id="timeline" open title="Review recent text additions">
+                        <summary title="Show recent additions to this document">TIMELINE</summary>
+                        <div class="timeline-content">
+                            <p id="timeline-name" title="Active note history">Recent additions</p>
+                            <ol id="timeline-additions" aria-label="Recent text additions" title="Recent text added to this note"></ol>
+                            <p id="timeline-empty" title="No recent edits are recorded">No additions yet.</p>
+                        </div>
+                    </details>
+                </div>
+            </aside>
+            <div id="explorer-resizer" class="explorer-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Explorer" aria-valuemin="190" aria-valuemax="480" aria-valuenow="240" tabindex="0" title="Drag to resize Explorer"></div>
 
-        <!-- Note area -->
-        <h1>notes</h1>
+            <main class="editor" aria-label="Text editor" title="Write and edit the current note">
+                <div class="editor-toolbar" title="Current document details">
+                    <div class="breadcrumbs" title="Current document">
+                        <span id="breadcrumb-name" title="Current note name">Untitled</span>
+                        <span class="breadcrumb-chevron" title="Document location">›</span>
+                        <span id="breadcrumb-kind" title="Current document type">Text File</span>
+                    </div>
+                    <span id="editor-language" title="Current file language">Plain Text</span>
+                </div>
+                <div id="search-bar" class="search-bar" hidden title="Search current note">
+                    <input id="search-input" type="search" placeholder="Find in this note" aria-label="Find in this note" title="Find text in note">
+                    <button id="find-previous" type="button" aria-label="Previous match" title="Find previous match">↑</button>
+                    <button id="find-next" type="button" aria-label="Next match" title="Find next match">↓</button>
+                    <button id="close-search" type="button" aria-label="Close search" title="Close search bar"></button>
+                </div>
+                <textarea id="note-content" aria-label="Note contents" title="Edit current note" placeholder="Start writing, or open a .txt file." spellcheck="false"></textarea>
+                <footer class="status-bar" title="Document status">
+                    <span id="status" role="status" aria-live="polite" title="Save and editor messages">Ready</span>
+                    <span id="cursor-position" title="Current cursor position">Ln 1, Col 1</span>
+                    <span title="Text encoding">UTF-8</span>
+                    <span title="Line ending format">LF</span>
+                    <span title="Current file language">Plain Text</span>
+                </footer>
+            </main>
+        </div>
     </div>
+
+    <dialog id="settings-dialog" aria-labelledby="settings-title" aria-describedby="settings-description" title="Application preferences">
+        <form method="dialog" class="settings-form" title="Change and save preferences">
+            <h2 id="settings-title" title="Application preferences">Settings</h2>
+            <p id="settings-description" class="settings-intro">Set how notes are saved and displayed.</p>
+            <section class="settings-section" aria-labelledby="editing-settings-title" title="Editor behavior preferences">
+                <h3 id="editing-settings-title" title="Text editing options">Editing</h3>
+                <label class="setting-row" for="auto-save">
+                    <span class="setting-copy">
+                        <span class="setting-name">Auto-save files</span>
+                        <span class="setting-description">Save opened files automatically.</span>
+                    </span>
+                    <input id="auto-save" type="checkbox" title="Save opened files automatically">
+                </label>
+                <label class="setting-row setting-select-row" for="auto-save-delay">
+                    <span class="setting-copy">
+                        <span class="setting-name">Auto-save delay</span>
+                        <span class="setting-description">Wait before saving changes.</span>
+                    </span>
+                    <select id="auto-save-delay" title="Choose auto-save delay">
+                        <option value="500" title="Save after 0.5 seconds">0.5 seconds</option>
+                        <option value="800" title="Save after 0.8 seconds">0.8 seconds</option>
+                        <option value="1500" title="Save after 1.5 seconds">1.5 seconds</option>
+                        <option value="3000" title="Save after 3 seconds">3 seconds</option>
+                        <option value="5000" title="Save after 5 seconds">5 seconds</option>
+                    </select>
+                </label>
+                <label class="setting-row setting-select-row" for="font-size">
+                    <span class="setting-copy">
+                        <span class="setting-name">Editor text size</span>
+                        <span class="setting-description">Enter a size from 6 to 72 pixels.</span>
+                    </span>
+                    <input id="font-size" type="number" min="6" max="72" step="1" required title="Enter editor text size in pixels" aria-label="Editor text size in pixels">
+                </label>
+                <label class="setting-row" for="word-wrap">
+                    <span class="setting-copy">
+                        <span class="setting-name">Wrap long lines</span>
+                        <span class="setting-description">Keep text inside editor.</span>
+                    </span>
+                    <input id="word-wrap" type="checkbox" title="Wrap long editor lines">
+                </label>
+            </section>
+            <div class="dialog-actions">
+                <button type="submit" value="cancel" class="secondary" title="Discard settings changes">Cancel</button>
+                <button id="save-settings" type="submit" value="save" title="Save app settings">Save settings</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="renderer.js"></script>
 </body>
-<script src="main.js"></script>
-</body>
-<script src="renderer.js"></script>
 </html>

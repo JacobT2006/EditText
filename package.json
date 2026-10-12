@@ -1,20 +1,24 @@
 {
-  "name": "unix-notes",
+  "name": "EditText",
   "version": "1.0.0",
-  "description": "Notes app with mac",
+  "productName": "EditText",
+  "description": "A desktop notes app",
   "repository": {
     "type": "git",
-    "url": "https://https://github.com/JacobT2006/Unix-Notes"
+    "url": "https://github.com/JacobT2006/Unix-Notes"
   },
   "license": "MIT",
   "author": "JacobT2006",
   "type": "commonjs",
   "main": "main.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "start": "electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "electron": "38.4.0"
+    "electron": "44.7.0"
   }
 }
