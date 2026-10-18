@@ -1,7 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// EXPOSE ONLY THE APP ACTIONS NEEDED BY THE RENDERER.
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
+  // FORWARD WINDOW ACTIONS AND STATE EVENTS.
   window: {
     minimize: () => ipcRenderer.invoke('window-control', 'minimize'),
     toggleMaximize: () => ipcRenderer.invoke('window-control', 'toggle-maximize'),
@@ -19,18 +21,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener('window-maximize-state', listener);
     },
   },
+  // CREATE, OPEN, SAVE, AND CLOSE TEXT NOTES.
   notes: {
     create: () => ipcRenderer.invoke('note:new'),
     open: () => ipcRenderer.invoke('note:open'),
-    save: (id, content, saveAs = false) =>
-      ipcRenderer.invoke('note:save', { id, content, saveAs }),
+    save: (id, content, saveAs = false, automatic = false) =>
+      ipcRenderer.invoke('note:save', { id, content, saveAs, automatic }),
     confirmClose: (name) => ipcRenderer.invoke('note:confirm-close', name),
   },
+  // LOAD PREFERENCES AND SYNC AUTO-SAVE MENU STATE.
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (settings) => ipcRenderer.invoke('settings:set', settings),
     syncAutoSaveMenuState: (enabled) => ipcRenderer.send('settings:auto-save-menu-state', enabled),
   },
+  // SEND APP MENU COMMANDS TO THE RENDERER.
   executeCommand: (command) => ipcRenderer.invoke('app:command', command),
   onCommand: (callback) => {
     const listener = (_event, command) => callback(command);

@@ -9,6 +9,7 @@
 </head>
 <body>
     <div class="app">
+        <!-- TITLE AREA, WINDOW CONTROLS, AND NOTES MENU. -->
         <header class="title-bar" title="Application title bar">
             <span class="title" title="Plain-text notes app">Unix Notes</span>
             <div class="window-controls">
@@ -17,66 +18,64 @@
                 <button id="maximize-btn" class="control-btn maximize" type="button" data-maximize-action="expand" aria-label="Expand window" title="Expand window"></button>
             </div>
             <div class="file-menu">
-                <button id="file-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open File menu" title="Open File menu">File</button>
+                <button id="file-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open Notes menu" title="Open Notes menu">Notes</button>
                 <div id="file-menu" class="file-menu-items" hidden>
                     <button type="button" data-command="new" title="Create a new note">New Note <span>⌘/Ctrl+N</span></button>
-                    <button type="button" data-command="open" title="Open existing text files">Open… <span>⌘/Ctrl+O</span></button>
+                    <button type="button" data-command="open" title="Open existing text notes">Open Notes… <span>⌘/Ctrl+O</span></button>
                     <hr>
-                    <button id="menu-auto-save" type="button" role="menuitemcheckbox" aria-checked="false" data-command="toggle-auto-save" title="Toggle automatic saving">
-                        <span>Auto Save</span>
+                    <button id="menu-auto-save" type="button" role="menuitemcheckbox" aria-checked="false" data-command="toggle-auto-save" title="Toggle automatic saving for notes">
+                        <span>Auto Save Notes</span>
                         <span class="menu-check" aria-hidden="true">✓</span>
                     </button>
                     <hr>
-                    <button type="button" data-command="save" title="Save current note">Save <span>⌘/Ctrl+S</span></button>
-                    <button type="button" data-command="save-as" title="Save to another file">Save As… <span>⌘/Ctrl+Shift+S</span></button>
-                    <hr>
-                    <button type="button" data-command="settings" title="Change app preferences">Settings…</button>
+                    <button type="button" data-command="save" title="Save current note">Save Note <span>⌘/Ctrl+S</span></button>
+                    <button type="button" data-command="save-as" title="Save the note to another location">Save Note As… <span>⌘/Ctrl+Shift+S</span></button>
                 </div>
             </div>
         </header>
 
+        <!-- NOTE ACTIONS, OPEN-NOTE LIST, TIMELINE, AND EDITOR. -->
         <div class="workspace">
             <nav class="activity-bar" aria-label="Actions" title="Quick note actions">
                 <button class="active-activity-icon" type="button" aria-label="Notes explorer" title="Notes explorer" disabled></button>
                 <button class="activity-icon three" id="new-note" type="button" aria-label="New note" title="Create a new note"></button>
-                <button class="activity-icon one" id="find-note" type="button" aria-label="Find in note" title="Find text in note"></button>
-                <button class="activity-icon open-file" id="open-file" type="button" aria-label="Open text file" title="Open text file"></button>
+                <button class="activity-icon one" id="find-note" type="button" aria-label="Find in note" title="Find text in the current note"></button>
+                <button class="activity-icon open-file" id="open-file" type="button" aria-label="Open note" title="Open a text note"></button>
+                <button class="activity-icon settings" id="open-settings" type="button" aria-label="Settings" title="Open settings"></button>
                 <button class="activity-icon two" id="quitButton" type="button" aria-label="Close window" title="Close current window"></button>
             </nav>
 
             <aside class="explorer" aria-label="Explorer" title="Open notes and history">
                 <div class="explorer-title" title="Browse open notes">EXPLORER</div>
+                <!-- OPEN NOTES SCROLL ABOVE THE FIXED TIMELINE. -->
                 <details class="explorer-section open-editors-section" open title="Manage open notes">
                     <summary class="section-heading" title="Show or hide open notes">
-                        <span>OPEN EDITORS</span>
-                        <button id="new-tab" type="button" aria-label="New note" title="Create a new note"></button>
+                        <span>OPEN NOTES</span>
                     </summary>
                     <div class="open-editors-content" title="Scroll through open notes">
-                        <div id="tabs" role="tablist" aria-label="Open editors" title="Select or reorder open notes"></div>
-                        <p id="empty-editors" title="Open a file or create a note">No open editors</p>
+                        <div id="tabs" role="tablist" aria-label="Open notes" title="Select or reorder open notes"></div>
+                        <p id="empty-editors" title="Open or create a note">No notes open</p>
                     </div>
                 </details>
                 <div class="explorer-bottom">
-                    <details id="timeline" open title="Review recent text additions">
-                        <summary title="Show recent additions to this document">TIMELINE</summary>
+                    <details id="timeline" open title="See when this note was last saved">
+                        <summary title="Show when this note was last saved">TIMELINE</summary>
                         <div class="timeline-content">
-                            <p id="timeline-name" title="Active note history">Recent additions</p>
-                            <ol id="timeline-additions" aria-label="Recent text additions" title="Recent text added to this note"></ol>
-                            <p id="timeline-empty" title="No recent edits are recorded">No additions yet.</p>
+                            <time id="timeline-last-saved" title="When this note was last saved">Last saved: Not saved yet</time>
                         </div>
                     </details>
                 </div>
             </aside>
             <div id="explorer-resizer" class="explorer-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Explorer" aria-valuemin="190" aria-valuemax="480" aria-valuenow="240" tabindex="0" title="Drag to resize Explorer"></div>
 
-            <main class="editor" aria-label="Text editor" title="Write and edit the current note">
-                <div class="editor-toolbar" title="Current document details">
-                    <div class="breadcrumbs" title="Current document">
+            <main class="editor" aria-label="Notes editor" title="Write and edit the current note">
+                <!-- CURRENT NOTE NAME, TYPE, AND SEARCH TOOLS. -->
+                <div class="editor-toolbar" title="Current note details">
+                    <div class="breadcrumbs" title="Current note">
                         <span id="breadcrumb-name" title="Current note name">Untitled</span>
-                        <span class="breadcrumb-chevron" title="Document location">›</span>
-                        <span id="breadcrumb-kind" title="Current document type">Text File</span>
+                        <span class="breadcrumb-chevron" title="Note location">›</span>
+                        <span id="breadcrumb-kind" title="Current note type">Text Note</span>
                     </div>
-                    <span id="editor-language" title="Current file language">Plain Text</span>
                 </div>
                 <div id="search-bar" class="search-bar" hidden title="Search current note">
                     <input id="search-input" type="search" placeholder="Find in this note" aria-label="Find in this note" title="Find text in note">
@@ -84,30 +83,32 @@
                     <button id="find-next" type="button" aria-label="Next match" title="Find next match">↓</button>
                     <button id="close-search" type="button" aria-label="Close search" title="Close search bar"></button>
                 </div>
-                <textarea id="note-content" aria-label="Note contents" title="Edit current note" placeholder="Start writing, or open a .txt file." spellcheck="false"></textarea>
-                <footer class="status-bar" title="Document status">
-                    <span id="status" role="status" aria-live="polite" title="Save and editor messages">Ready</span>
+                <textarea id="note-content" aria-label="Note contents" title="Edit current note" placeholder="Start writing, or open a .txt note." spellcheck="false"></textarea>
+                <!-- SAVE STATUS, CURSOR POSITION, AND TEXT FORMAT. -->
+                <footer class="status-bar" title="Note status">
+                    <span id="status" role="status" aria-live="polite" title="Note and save messages">Ready</span>
                     <span id="cursor-position" title="Current cursor position">Ln 1, Col 1</span>
                     <span title="Text encoding">UTF-8</span>
                     <span title="Line ending format">LF</span>
-                    <span title="Current file language">Plain Text</span>
+                    <span title="Current note format">Plain Text</span>
                 </footer>
             </main>
         </div>
     </div>
 
+    <!-- NOTE SAVING AND DISPLAY PREFERENCES. -->
     <dialog id="settings-dialog" aria-labelledby="settings-title" aria-describedby="settings-description" title="Application preferences">
         <form method="dialog" class="settings-form" title="Change and save preferences">
             <h2 id="settings-title" title="Application preferences">Settings</h2>
             <p id="settings-description" class="settings-intro">Set how notes are saved and displayed.</p>
-            <section class="settings-section" aria-labelledby="editing-settings-title" title="Editor behavior preferences">
-                <h3 id="editing-settings-title" title="Text editing options">Editing</h3>
+            <section class="settings-section" aria-labelledby="editing-settings-title" title="Note editing preferences">
+                <h3 id="editing-settings-title" title="Text note options">Notes</h3>
                 <label class="setting-row" for="auto-save">
                     <span class="setting-copy">
-                        <span class="setting-name">Auto-save files</span>
-                        <span class="setting-description">Save opened files automatically.</span>
+                        <span class="setting-name">Auto-save notes</span>
+                        <span class="setting-description">Save opened notes automatically.</span>
                     </span>
-                    <input id="auto-save" type="checkbox" title="Save opened files automatically">
+                    <input id="auto-save" type="checkbox" title="Save opened notes automatically">
                 </label>
                 <label class="setting-row setting-select-row" for="auto-save-delay">
                     <span class="setting-copy">
@@ -124,17 +125,17 @@
                 </label>
                 <label class="setting-row setting-select-row" for="font-size">
                     <span class="setting-copy">
-                        <span class="setting-name">Editor text size</span>
+                        <span class="setting-name">Note text size</span>
                         <span class="setting-description">Enter a size from 6 to 72 pixels.</span>
                     </span>
-                    <input id="font-size" type="number" min="6" max="72" step="1" required title="Enter editor text size in pixels" aria-label="Editor text size in pixels">
+                    <input id="font-size" type="number" min="6" max="72" step="1" required title="Enter note text size in pixels" aria-label="Note text size in pixels">
                 </label>
                 <label class="setting-row" for="word-wrap">
                     <span class="setting-copy">
                         <span class="setting-name">Wrap long lines</span>
-                        <span class="setting-description">Keep text inside editor.</span>
+                        <span class="setting-description">Wrap long lines in the note.</span>
                     </span>
-                    <input id="word-wrap" type="checkbox" title="Wrap long editor lines">
+                    <input id="word-wrap" type="checkbox" title="Wrap long note lines">
                 </label>
             </section>
             <div class="dialog-actions">

@@ -4,10 +4,11 @@
     --activity: #181818;
     --sidebar: #181818;
     --panel-border: #2b2b2b;
-    --muted: #858585;
+    --muted: #858585; 
     --accent: #007acc;
 }
 
+/* APPLY CONSISTENT BOX SIZING AND APP DEFAULTS. */
 * {
     box-sizing: border-box;
 }
@@ -16,7 +17,7 @@ body {
     margin: 0;
     overflow: hidden;
     background: #1f1f1f;
-    color: #ccc;
+    color: #ccc; 
     font-size: 12px;
 }
 
@@ -36,6 +37,7 @@ input {
     height: 100vh;
 }
 
+/* TITLE BAR, NATIVE MACOS CHROME, AND CUSTOM CONTROLS. */
 .title-bar {
     position: relative;
     display: flex;
@@ -183,9 +185,7 @@ body.platform-macos .file-menu {
 .file-menu-items [aria-checked="true"] .menu-check { visibility: visible; }
 .file-menu-items hr { border: 0; border-top: 1px solid #404040; }
 
-/* OVERALL WORKSPACE NOT THE MENU ITEMS OR BAR */
-
-
+/* ARRANGE THE ACTION BAR, EXPLORER, AND NOTE EDITOR. */
 .workspace {
     display: flex;
     flex: 1;
@@ -209,7 +209,7 @@ body.platform-macos .file-menu {
     height: 30px;
     padding: 0;
     border: 0;
-    background-color: #858585;
+    /* background-color: #858585; */
     cursor: pointer;
     mask-position: center;
     mask-repeat: no-repeat;
@@ -239,24 +239,17 @@ body.platform-macos .file-menu {
     mask-image: url('Assets/OpenFile.svg');
     -webkit-mask-image: url('Assets/OpenFile.svg');
 }
-.activity-icon.two {
+.activity-icon.settings {
     margin-top: auto;
+    mask-image: url('Assets/Settings.svg');
+    -webkit-mask-image: url('Assets/Settings.svg');
+}
+.activity-icon.two {
     margin-bottom: 14px;
     mask-image: url('Assets/Quit.svg');
     -webkit-mask-image: url('Assets/Quit.svg');
 }
 
-.section-heading button#new-tab {
-    background-color: #aaa;
-    color: transparent;
-    mask: url('Assets/Plus.svg') center / 15px 15px no-repeat;
-    -webkit-mask: url('Assets/Plus.svg') center / 15px 15px no-repeat;
-}
-
-.section-heading button#new-tab:hover {
-    background-color: #fff;
-}
-/* EXPLORER SECTION WITH OPEN FILES HERE */
 .explorer {
     position: relative;
     display: flex;
@@ -355,10 +348,11 @@ body.resizing-explorer .explorer-resizer::after {
 }
 
 .section-heading {
+    position: relative;
     display: flex;
     height: 26px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 0 7px 0 0;
     color: #bbb;
     font-size: 10px;
@@ -366,6 +360,13 @@ body.resizing-explorer .explorer-resizer::after {
     letter-spacing: .03em;
     list-style: none;
     cursor: pointer;
+}
+
+.section-heading > span {
+    position: absolute;
+    right: 24px;
+    left: 24px;
+    text-align: center;
 }
 
 .section-heading::before {
@@ -413,7 +414,8 @@ body.resizing-explorer .explorer-resizer::after {
     min-width: 0;
     height: 23px;
     padding: 0 8px 0 18px;
-    color: #bbb;
+    border-bottom: 1px solid #303030;
+    color: #aaa;
     cursor: grab;
     user-select: none;
 }
@@ -424,16 +426,11 @@ body.resizing-explorer .explorer-resizer::after {
 .tab.drop-after { box-shadow: inset 0 -2px var(--accent); }
 body.reordering-editors { cursor: grabbing; }
 
-.tab:hover,
-.tab.active {
-    background: #2a2d2e;
-}
-
 .tab.active {
     color: #fff;
 }
 
-.editor-select {
+.tab-select {
     flex: 1;
     min-width: 0;
     height: 23px;
@@ -442,11 +439,17 @@ body.reordering-editors { cursor: grabbing; }
     border: 0;
     background: transparent;
     color: inherit;
+    appearance: none;
     cursor: pointer;
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 11px;
+}
+
+.tab-select:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
 }
 
 .dirty-indicator {
@@ -465,6 +468,14 @@ body.reordering-editors { cursor: grabbing; }
     cursor: pointer;
     mask: url('Assets/Close.svg') center / 14px 14px no-repeat;
     -webkit-mask: url('Assets/Close.svg') center / 14px 14px no-repeat;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.tab:hover > .tab-close,
+.tab:focus-within > .tab-close {
+    opacity: 1;
+    visibility: visible;
 }
 
 .tab-close:hover { background-color: #fff; }
@@ -540,6 +551,7 @@ body.reordering-editors { cursor: grabbing; }
     transition: transform 120ms ease;
 }
 
+/* SHOW THE LAST-SAVED VALUE IN THE TIMELINE. */
 .timeline-content {
     flex: 1 1 auto;
     min-height: 0;
@@ -547,53 +559,15 @@ body.reordering-editors { cursor: grabbing; }
     padding: 4px 14px 10px 22px;
 }
 
-.timeline-content #timeline-name {
-    margin: 4px 0 8px;
-    overflow: hidden;
-    color: #bbb;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#timeline-additions {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-#timeline-additions li {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-#timeline-additions time {
-    color: #777;
-    font-size: 10px;
-}
-
-#timeline-additions li span,
-#timeline-empty {
-    display: -webkit-box;
-    margin: 0;
-    overflow: hidden;
-    color: #aaa;
+.timeline-content #timeline-last-saved {
+    display: block;
+    margin: 4px 0;
+    color: #888;
     font-size: 11px;
     line-height: 1.4;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
 }
 
-#timeline-empty {
-    padding: 0 15px;
-    color: #777;
-}
-
+/* SIZE THE EDITOR, SEARCH BAR, AND STATUS AREA. */
 .editor {
     position: relative;
     display: flex;
@@ -632,8 +606,6 @@ body.reordering-editors { cursor: grabbing; }
 }
 
 .breadcrumb-chevron { color: #777; }
-#editor-language { color: #888; }
-
 .search-bar {
     position: absolute;
     z-index: 2;
@@ -715,6 +687,7 @@ body.reordering-editors { cursor: grabbing; }
     white-space: nowrap;
 }
 
+/* STYLE THE SETTINGS DIALOG AND ITS FORM CONTROLS. */
 dialog {
     width: min(420px, calc(100vw - 32px));
     padding: 0;
@@ -767,7 +740,8 @@ dialog::backdrop { background: #0009; }
 .setting-row input { accent-color: #007acc; }
 
 .setting-row select,
-.setting-row input[type="number"] {
+.setting-row input[type="number"],
+.setting-row input[type="text"] {
     min-width: 100px;
     padding: 5px 7px;
     border: 1px solid #555;
@@ -775,6 +749,8 @@ dialog::backdrop { background: #0009; }
     background: #1e1e1e;
     color: #eee;
 }
+
+.setting-row input[type="text"] { width: 150px; }
 
 .dialog-actions {
     display: flex;

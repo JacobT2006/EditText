@@ -1,15 +1,14 @@
 document.body.classList.toggle('platform-macos', window.electronAPI.platform === 'darwin');
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // CACHE NOTE UI ELEMENTS AND SESSION STATE.
   const body = document.body;
   const tabsElement = document.getElementById('tabs');
   const editor = document.getElementById('note-content');
   const status = document.getElementById('status');
   const emptyEditors = document.getElementById('empty-editors');
   const breadcrumbName = document.getElementById('breadcrumb-name');
-  const timelineName = document.getElementById('timeline-name');
-  const timelineAdditions = document.getElementById('timeline-additions');
-  const timelineEmpty = document.getElementById('timeline-empty');
+  const timelineLastSaved = document.getElementById('timeline-last-saved');
   const cursorPosition = document.getElementById('cursor-position');
   const explorer = document.querySelector('.explorer');
   const explorerResizer = document.getElementById('explorer-resizer');
@@ -25,43 +24,50 @@ window.addEventListener('DOMContentLoaded', async () => {
   const menuAutoSaveInput = document.getElementById('menu-auto-save');
   const documents = [];
   let activeId = null;
-  let autoSave = false;
+  let autoSave = true;
   let autoSaveDelay = 800;
   let closeRequested = false;
   let tabDrag = null;
   let explorerWidth = 240;
   let resizePointerId = null;
+  let cursorPositionFrame = null;
 
   const activeDocument = () => documents.find((document) => document.id === activeId);
   const setStatus = (message) => {
     status.textContent = message;
   };
 
+  // APPLY AUTO-SAVE CHANGES TO SETTINGS AND OPEN NOTES.
   function updateAutoSaveState(enabled) {
     autoSave = enabled;
     autoSaveInput.checked = enabled;
     menuAutoSaveInput.setAttribute('aria-checked', String(enabled));
     window.electronAPI.settings.syncAutoSaveMenuState(enabled);
 
-    if (enabled) {
-      for (const note of documents) {
-        if (note.dirty) {
+    if (enabled) { //O(1)
+      for (const note of documents) { //O(N)
+        if (note.dirty) { //O(1)
           scheduleAutoSave(note);
         }
       }
     } else {
-      for (const note of documents) {
+      for (const note of documents) { //O(N)
         clearTimeout(note.timer);
+        note.timer = null;
+      }
+      if (status.textContent === 'Auto-saving…') { //O(1)
+        setStatus('Auto-save is off');
       }
     }
   }
 
+  // TOGGLE AUTO-SAVE FROM THE NOTES MENU.
   async function toggleAutoSave() {
     try {
       const settings = await window.electronAPI.settings.get();
       const savedSettings = await window.electronAPI.settings.set({
         ...settings,
-        autoSave: !autoSave,
+        autoSave: !settings.autoSave,
       });
       updateAutoSaveState(savedSettings.autoSave);
       setStatus(savedSettings.autoSave ? 'Auto-save is on' : 'Auto-save is off');
@@ -71,6 +77,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // LOAD CURRENT PREFERENCES BEFORE SHOWING SETTINGS.
   async function openSettings() {
     try {
       const settings = await window.electronAPI.settings.get();
@@ -86,10 +93,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // REBUILD THE OPEN-NOTE LIST AND ITS CLOSE CONTROLS.
   function renderTabs() {
     tabsElement.replaceChildren();
     emptyEditors.hidden = documents.length > 0;
-    for (const note of documents) {
+    for (const note of documents) { //O(N)
       const tab = document.createElement('div');
       tab.className = `tab${note.id === activeId ? ' active' : ''}`;
       tab.dataset.noteId = note.id;
@@ -119,58 +127,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // SHOW WHEN THE ACTIVE NOTE WAS LAST SAVED.
   function renderTimeline(note) {
-    timelineAdditions.replaceChildren();
-    timelineName.textContent = note ? note.name : 'Recent additions';
-    timelineEmpty.hidden = Boolean(note?.additions.length);
-    if (!note) {
-      return;
-    }
-
-    for (const addition of note.additions) {
-      const item = document.createElement('li');
-      const time = document.createElement('time');
-      time.dateTime = addition.timestamp;
-      time.title = 'Time this text was added';
-      time.textContent = new Date(addition.timestamp).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      const text = document.createElement('span');
-      text.title = 'Text added in this edit';
-      text.textContent = addition.text.length > 120
-        ? `${addition.text.slice(0, 120)}…`
-        : addition.text;
-      item.append(time, text);
-      timelineAdditions.append(item);
+    if (!note?.lastSavedAt) { //O(1)
+      timelineLastSaved.textContent = 'Last saved: Not saved yet';
+      timelineLastSaved.removeAttribute('datetime');
+    } else {
+      const savedDate = new Date(note.lastSavedAt);
+      timelineLastSaved.textContent = `Last saved: ${savedDate.toLocaleString()}`;
+      timelineLastSaved.dateTime = note.lastSavedAt;
     }
   }
 
-  function findInsertedText(previous, current) {
-    let prefixLength = 0;
-    while (
-      prefixLength < previous.length
-      && prefixLength < current.length
-      && previous[prefixLength] === current[prefixLength]
-    ) {
-      prefixLength += 1;
-    }
-
-    let suffixLength = 0;
-    while (
-      suffixLength < previous.length - prefixLength
-      && suffixLength < current.length - prefixLength
-      && previous[previous.length - suffixLength - 1]
-        === current[current.length - suffixLength - 1]
-    ) {
-      suffixLength += 1;
-    }
-    return current.slice(prefixLength, current.length - suffixLength);
-  }
-
+  // DISPLAY A NOTE AND UPDATE ITS RELATED PANELS.
   function activateDocument(id) {
     const document = documents.find((item) => item.id === id);
-    if (!document) {
+    if (!document) { //O(1)
       return;
     }
     activeId = id;
@@ -178,11 +150,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     editor.disabled = false;
     breadcrumbName.textContent = document.name;
     renderTimeline(document);
+    if (cursorPositionFrame !== null) { //O(1)
+      cancelAnimationFrame(cursorPositionFrame);
+      cursorPositionFrame = null;
+    }
     updateCursorPosition();
     renderTabs();
-    setStatus(document.dirty ? 'Unsaved changes' : '');
+    setStatus(document.dirty ? 'Unsaved note changes' : '');
   }
 
+  // KEEP THE CURSOR POSITION VISIBLE IN THE STATUS BAR.
   function updateCursorPosition() {
     const beforeCursor = editor.value.slice(0, editor.selectionStart);
     const line = beforeCursor.split('\n').length;
@@ -190,6 +167,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     cursorPosition.textContent = `Ln ${line}, Col ${column}`;
   }
 
+  // COALESCE CURSOR UPDATES DURING RAPID EDITING.
+  function scheduleCursorPositionUpdate() {
+    if (cursorPositionFrame !== null) { //O(1)
+      return;
+    }
+    cursorPositionFrame = requestAnimationFrame(() => {
+      cursorPositionFrame = null;
+      updateCursorPosition();
+    });
+  }
+
+  // RESIZE THE EXPLORER WITHIN THE AVAILABLE WORKSPACE.
   function setExplorerWidth(width) {
     const minWidth = 190;
     const maxWidth = Math.max(minWidth, Math.min(480, window.innerWidth - 48 - 300));
@@ -198,8 +187,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     explorerResizer.setAttribute('aria-valuenow', String(Math.round(explorerWidth)));
   }
 
+  // SUPPORT POINTER AND KEYBOARD EXPLORER RESIZING.
   explorerResizer.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) {
+    if (event.button !== 0) { //O(1)
       return;
     }
     resizePointerId = event.pointerId;
@@ -209,7 +199,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   explorerResizer.addEventListener('pointermove', (event) => {
-    if (resizePointerId !== event.pointerId) {
+    if (resizePointerId !== event.pointerId) { //O(1)
       return;
     }
     const activityBar = document.querySelector('.activity-bar');
@@ -217,7 +207,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   function stopExplorerResize(event) {
-    if (resizePointerId !== event.pointerId) {
+    if (resizePointerId !== event.pointerId) { //O(1)
       return;
     }
     resizePointerId = null;
@@ -231,23 +221,43 @@ window.addEventListener('DOMContentLoaded', async () => {
     body.classList.remove('resizing-explorer');
   });
   explorerResizer.addEventListener('keydown', (event) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') { //O(1)
       return;
     }
     event.preventDefault();
     setExplorerWidth(explorerWidth + (event.key === 'ArrowRight' ? 16 : -16));
   });
 
-  function refreshDirtyState() {
-    renderTabs();
-    const document = activeDocument();
-    setStatus(document?.dirty ? 'Unsaved changes' : '');
+  // REFRESH OPEN-NOTE LABELS AND UNSAVED STATUS.
+  function refreshDirtyState(document = activeDocument()) {
+    if (document) { //O(1)
+      const tab = tabsElement.querySelector(
+        `[data-note-id="${CSS.escape(document.id)}"]`,
+      );
+      if (tab) { //O(1)
+        const select = tab.querySelector('.tab-select');
+        const close = tab.querySelector('.tab-close');
+        select.textContent = `${document.name}${document.dirty ? ' •' : ''}`;
+        select.title = `Switch to ${document.name}`;
+        close.setAttribute('aria-label', `Close ${document.name}`);
+        close.title = `Close ${document.name}`;
+        tab.title = `Drag to reorder ${document.name}`;
+      }
+    }
+    const active = activeDocument();
+    setStatus(active?.dirty ? 'Unsaved note changes' : '');
   }
 
+  // CREATE A NEW UNSAVED NOTE TAB.
   async function createDocument() {
     try {
       const document = await window.electronAPI.notes.create();
-      documents.push({ ...document, dirty: false, revision: 0, timer: null, additions: [] });
+      documents.push({
+        ...document,
+        dirty: false,
+        revision: 0,
+        timer: null,
+      });
       activateDocument(document.id);
       editor.focus();
     } catch (error) {
@@ -255,64 +265,83 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // OPEN TEXT NOTES AND ADD THEM TO THE TAB LIST.
   async function openDocuments() {
     try {
       const opened = await window.electronAPI.notes.open();
-      for (const document of opened) {
-        if (!documents.some((existing) => existing.id === document.id)) {
-          documents.push({ ...document, dirty: false, revision: 0, timer: null, additions: [] });
+      for (const document of opened) { //O(N)
+        if (!documents.some((existing) => existing.id === document.id)) { //O(1)
+          documents.push({
+            ...document,
+            dirty: false,
+            revision: 0,
+            timer: null,
+          });
         }
       }
-      if (opened.length > 0) {
+      if (opened.length > 0) { //O(1)
         activateDocument(opened[opened.length - 1].id);
-        setStatus(`Opened ${opened.length} ${opened.length === 1 ? 'file' : 'files'}`);
+        setStatus(`Opened ${opened.length} ${opened.length === 1 ? 'note' : 'notes'}`);
       }
     } catch (error) {
-      setStatus(`Could not open file: ${error.message}`);
+      setStatus(`Could not open note: ${error.message}`);
     }
   }
 
-  async function saveDocument(document, saveAs = false) {
-    if (!document) {
+  // SAVE A NOTE AND PRESERVE EDITS MADE WHILE SAVING.
+  async function saveDocument(document, saveAs = false, automatic = false) {
+    if (!document) { //O(1)
+      return false;
+    }
+    if (automatic && !autoSave) { //O(1)
       return false;
     }
     try {
       let shouldSaveAs = saveAs;
-      do {
+      do { //~O(1)
+        if (automatic && !autoSave) { //O(1)
+          return false;
+        }
         const revision = document.revision;
         const result = await window.electronAPI.notes.save(
           document.id,
           document.content,
           shouldSaveAs,
+          automatic,
         );
-        if (result.canceled) {
+        if (result.canceled) { //O(1)
           return false;
         }
         shouldSaveAs = false;
         document.name = result.name;
         document.hasFile = result.hasFile;
-        if (result.filePath) {
+        document.lastSavedAt = result.lastSavedAt;
+        if (result.filePath) { //O(1)
           document.filePath = result.filePath;
         }
         document.dirty = revision !== document.revision;
+        if (activeId === document.id) { //O(1)
+          renderTimeline(document);
+        }
       } while (document.dirty);
       clearTimeout(document.timer);
-      refreshDirtyState();
-      setStatus(`Saved ${document.name}`);
+      refreshDirtyState(document);
+      setStatus(`Saved note ${document.name}`);
       return true;
     } catch (error) {
-      setStatus(`Could not save ${document.name}: ${error.message}`);
+      setStatus(`Could not save note ${document.name}: ${error.message}`);
       return false;
     }
   }
 
+  // CLOSE A NOTE AFTER RESOLVING UNSAVED CHANGES.
   async function closeDocument(id) {
     const index = documents.findIndex((document) => document.id === id);
-    if (index < 0) {
+    if (index < 0) { //O(1)
       return true;
     }
     const document = documents[index];
-    if (document.dirty) {
+    if (document.dirty) { //O(1)
       let choice;
       try {
         choice = await window.electronAPI.notes.confirmClose(document.name);
@@ -320,20 +349,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         setStatus(`Could not close ${document.name}: ${error.message}`);
         return false;
       }
-      if (choice === 'cancel') {
+      if (choice === 'cancel') { //O(1)
         return false;
       }
-      if (choice === 'save' && !(await saveDocument(document))) {
+      if (choice === 'save' && !(await saveDocument(document))) { //O(1)
         return false;
       }
     }
 
     clearTimeout(document.timer);
     documents.splice(index, 1);
-    if (activeId === id) {
+    if (activeId === id) { //O(1)
       const next = documents[Math.min(index, documents.length - 1)];
       activeId = null;
-      if (next) {
+      if (next) { //O(1)
         activateDocument(next.id);
       } else {
         editor.value = '';
@@ -347,35 +376,36 @@ window.addEventListener('DOMContentLoaded', async () => {
     return true;
   }
 
+  // CHECK EVERY OPEN NOTE BEFORE CLOSING THE WINDOW.
   async function closeWindowAfterCheckingNotes() {
-    if (closeRequested) {
+    if (closeRequested) { //O(1)
       return;
     }
     closeRequested = true;
     try {
       const discardedIds = new Set();
-      for (const note of documents) {
-        if (!note.dirty) {
+      for (const note of documents) { //O(N)
+        if (!note.dirty) { //O(1)
           continue;
         }
         const choice = await window.electronAPI.notes.confirmClose(note.name);
-        if (choice === 'cancel') {
+        if (choice === 'cancel') { //O(1)
           closeRequested = false;
           await window.electronAPI.window.cancelClose();
           return;
         }
-        if (choice === 'save' && !(await saveDocument(note))) {
+        if (choice === 'save' && !(await saveDocument(note))) { //O(1)
           closeRequested = false;
           await window.electronAPI.window.cancelClose();
           return;
         }
-        if (choice === 'discard') {
+        if (choice === 'discard') { //O(1)
           discardedIds.add(note.id);
         }
       }
-      for (const note of documents) {
+      for (const note of documents) { //O(N)
         clearTimeout(note.timer);
-        if (discardedIds.has(note.id)) {
+        if (discardedIds.has(note.id)) { //O(1)
           note.dirty = false;
         }
       }
@@ -389,35 +419,40 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // SAVE CHANGES AFTER THE USER'S AUTO-SAVE DELAY.
   function scheduleAutoSave(document) {
     clearTimeout(document.timer);
-    if (!autoSave || !document.hasFile) {
-      if (autoSave && !document.hasFile) {
-        setStatus('Auto-save is on. Use Save or Save As for this new note.');
+    if (!autoSave || !document.hasFile) { //O(1)
+      if (autoSave && !document.hasFile) { //O(1)
+        setStatus('Auto-save is on. Save this note once to choose a file.');
       }
       return;
     }
     setStatus('Auto-saving…');
     document.timer = setTimeout(() => {
-      saveDocument(document);
+      document.timer = null;
+      if (autoSave) { //O(1)
+        saveDocument(document, false, true);
+      }
     }, autoSaveDelay);
   }
 
+  // FIND THE NEXT OR PREVIOUS MATCH IN THE ACTIVE NOTE.
   function search(direction = 1) {
     const query = searchInput.value;
-    if (!query) {
+    if (!query) { //O(1)
       return;
     }
     const start = direction > 0 ? editor.selectionEnd : editor.selectionStart - 1;
     let index = direction > 0
       ? editor.value.indexOf(query, Math.max(0, start))
       : editor.value.lastIndexOf(query, start);
-    if (index < 0) {
+    if (index < 0) { //O(1)
       index = direction > 0
         ? editor.value.indexOf(query)
         : editor.value.lastIndexOf(query);
     }
-    if (index < 0) {
+    if (index < 0) { //O(1)
       setStatus(`No match for “${query}”`);
       return;
     }
@@ -426,6 +461,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setStatus('');
   }
 
+  // CONNECT THE CUSTOM WINDOW CONTROLS.
   document.getElementById('close-btn').addEventListener('click', () => {
     window.electronAPI.window.requestClose();
   });
@@ -443,19 +479,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     maximizeButton.setAttribute('aria-label', label);
     maximizeButton.title = label;
   });
+
+  // CONNECT NOTE CREATION, OPENING, AND CLOSE ACTIONS.
   document.getElementById('new-note').addEventListener('click', createDocument);
+  document.getElementById('open-settings').addEventListener('click', openSettings);
   document.getElementById('quitButton').addEventListener('click', () => {
     window.electronAPI.window.requestClose();
   });
-  document.getElementById('new-tab').addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    createDocument();
-  });
   document.getElementById('open-file').addEventListener('click', openDocuments);
+
+  // REORDER OPEN NOTE TABS WITH POINTER DRAGGING.
   tabsElement.addEventListener('pointerdown', (event) => {
     const tab = event.target.closest('.tab');
-    if (!tab || event.button !== 0 || event.target.closest('.tab-close')) {
+    if (!tab || event.button !== 0 || event.target.closest('.tab-close')) { //O(1)
       return;
     }
     tabDrag = {
@@ -469,6 +505,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   });
 
+  // CLEAR TEMPORARY TAB DRAG HIGHLIGHTS.
   function clearTabDrag() {
     tabsElement.querySelectorAll('.tab').forEach((tab) => {
       tab.classList.remove('dragging', 'drop-before', 'drop-after');
@@ -476,13 +513,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     body.classList.remove('reordering-editors');
   }
 
+  // TRACK THE TAB UNDER THE POINTER WHILE REORDERING.
   window.addEventListener('pointermove', (event) => {
-    if (!tabDrag || event.pointerId !== tabDrag.pointerId) {
+    if (!tabDrag || event.pointerId !== tabDrag.pointerId) { //O(1)
       return;
     }
-    if (!tabDrag.started) {
+    if (!tabDrag.started) { //O(1)
       const distance = Math.hypot(event.clientX - tabDrag.startX, event.clientY - tabDrag.startY);
-      if (distance < 5) {
+      if (distance < 5) { //O(1)
         return;
       }
       tabDrag.started = true;
@@ -495,7 +533,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     tabsElement.querySelectorAll('.tab').forEach((tab) => {
       tab.classList.remove('drop-before', 'drop-after');
     });
-    if (!target || target.dataset.noteId === tabDrag.id || !tabsElement.contains(target)) {
+    if (!target || target.dataset.noteId === tabDrag.id || !tabsElement.contains(target)) { //O(1)
       tabDrag.targetId = null;
       return;
     }
@@ -507,14 +545,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   window.addEventListener('pointerup', (event) => {
-    if (!tabDrag || event.pointerId !== tabDrag.pointerId) {
+    if (!tabDrag || event.pointerId !== tabDrag.pointerId) { //O(1)
       return;
     }
-    if (tabDrag.started && tabDrag.targetId) {
+    if (tabDrag.started && tabDrag.targetId) { //O(1)
       const fromIndex = documents.findIndex((note) => note.id === tabDrag.id);
       const [moved] = documents.splice(fromIndex, 1);
       const targetIndex = documents.findIndex((note) => note.id === tabDrag.targetId);
-      if (moved && targetIndex >= 0) {
+      if (moved && targetIndex >= 0) { //O(1)
         documents.splice(targetIndex + Number(tabDrag.insertAfter), 0, moved);
         renderTabs();
       }
@@ -526,6 +564,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     tabDrag = null;
     clearTabDrag();
   });
+
+  // CONNECT NOTE SEARCH AND NOTES MENU COMMANDS.
   document.getElementById('find-note').addEventListener('click', () => {
     searchBar.hidden = false;
     searchInput.focus();
@@ -544,7 +584,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   fileMenu.addEventListener('click', (event) => {
     const button = event.target.closest('[data-command]');
-    if (!button) {
+    if (!button) { //O(1)
       return;
     }
     fileMenu.hidden = true;
@@ -554,39 +594,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('.file-menu')) {
+    if (!event.target.closest('.file-menu')) { //O(1)
       fileMenu.hidden = true;
       fileMenuTrigger.setAttribute('aria-expanded', 'false');
     }
   });
 
+  // TRACK NOTE CHANGES AND SCHEDULE AUTO-SAVE.
   editor.addEventListener('input', () => {
     const document = activeDocument();
-    if (!document) {
+    if (!document || document.content === editor.value) { //O(1)
       return;
     }
-    const addition = findInsertedText(document.content, editor.value);
     document.content = editor.value;
     document.revision += 1;
     document.dirty = true;
-    if (addition) {
-      document.additions.unshift({
-        text: addition,
-        timestamp: new Date().toISOString(),
-      });
-      document.additions.length = Math.min(document.additions.length, 20);
-      renderTimeline(document);
-    }
     refreshDirtyState();
     scheduleAutoSave(document);
-    updateCursorPosition();
+    scheduleCursorPositionUpdate();
   });
-  editor.addEventListener('click', updateCursorPosition);
-  editor.addEventListener('keyup', updateCursorPosition);
+  editor.addEventListener('click', scheduleCursorPositionUpdate);
+  editor.addEventListener('keyup', scheduleCursorPositionUpdate);
 
+  // VALIDATE AND APPLY UPDATED NOTE SETTINGS.
   document.getElementById('save-settings').addEventListener('click', async (event) => {
     event.preventDefault();
-    if (!fontSizeInput.reportValidity()) {
+    if (!fontSizeInput.reportValidity()) { //O(1)
       return;
     }
     try {
@@ -601,7 +634,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       editor.style.fontSize = `${settings.fontSize}px`;
       editor.wrap = settings.wordWrap ? 'soft' : 'off';
       settingsDialog.close();
-      if (!autoSave) {
+      if (!autoSave) { //O(1)
         setStatus('Auto-save is off');
       }
     } catch (error) {
@@ -609,8 +642,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // ROUTE NATIVE MENU COMMANDS TO NOTE ACTIONS.
   function handleCommand(command) {
-    switch (command) {
+    switch (command) { //O(1)
       case 'new':
         createDocument();
         break;
@@ -634,14 +668,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         break;
     }
   }
+
+  // REGISTER MENU AND WINDOW-CLOSE HANDLERS.
   window.electronAPI.onCommand(handleCommand);
   window.electronAPI.window.onCloseRequested(closeWindowAfterCheckingNotes);
 
+  // HANDLE SEARCH SHORTCUTS AND WINDOW FOCUS.
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !searchBar.hidden) {
+    if (event.key === 'Escape' && !searchBar.hidden) { //O(1)
       searchBar.hidden = true;
     }
-    if (event.key === 'Enter' && searchBar.contains(document.activeElement)) {
+    if (event.key === 'Enter' && searchBar.contains(document.activeElement)) { //O(1)
       event.preventDefault();
       search(event.shiftKey ? -1 : 1);
     }
@@ -649,6 +686,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('blur', () => body.classList.add('inactive'));
   window.addEventListener('focus', () => body.classList.remove('inactive'));
 
+  // LOAD SAVED PREFERENCES BEFORE CREATING THE FIRST NOTE.
   try {
     const settings = await window.electronAPI.settings.get();
     updateAutoSaveState(settings.autoSave);

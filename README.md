@@ -1,8 +1,9 @@
-# Unix Notes
+# EditText
 
-A desktop notes app built with Electron.
+A desktop app for creating, editing, and organizing plain-text notes. Notes can be saved as `.txt` files.
+The Timeline shows when the active note was last saved.
 
-## Run
+## Start the notes app
 
 Requires Node.js 22.12.0 or newer.
 
@@ -10,4 +11,3 @@ Requires Node.js 22.12.0 or newer.
 npm install
 npm start
 ```
-

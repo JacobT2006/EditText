@@ -3,6 +3,7 @@ module.exports = {
       // Configuration for electron-packager
     },
     rebuildConfig: {},
+    // PACKAGE THE APP FOR DESKTOP PLATFORMS.
     makers: [
       {
         name: '@electron-forge/maker-zip',
@@ -21,6 +22,7 @@ module.exports = {
         },
       },
     ],
+    // PUBLISH RELEASES TO THE CONFIGURED STORAGE BUCKET.
     publishers: [
       {
         name: '@electron-forge/publisher-s3',
@@ -30,6 +32,7 @@ module.exports = {
         },
       },
     ],
+    // BUILD THE MAIN AND RENDERER WINDOWS WITH WEBPACK.
     plugins: [
       {
         name: '@electron-forge/plugin-webpack',
