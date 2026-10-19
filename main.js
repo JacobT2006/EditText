@@ -66,7 +66,7 @@ function createWindow() {
           trafficLightPosition: { x: 8, y: 10 },
         }
       : { frame: false }),
-    title: 'Unix Notes',
+    title: 'EditText',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -433,7 +433,7 @@ ipcMain.on('settings:auto-save-menu-state', (_event, enabled) => {
 });
 
 
-app.setName('Jacob APP');
+app.setName('EditText');
 
 // START THE APP AND RESTORE ITS WINDOW WHEN REACTIVATED.
 app.whenReady().then(() => {

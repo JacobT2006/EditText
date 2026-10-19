@@ -57,6 +57,6 @@ module.exports = {
     hooks: {
       // Custom hooks
     },
-    buildIdentifier: 'unix-notes',
+    buildIdentifier: 'edittext',
     outDir: 'dist',
   };
