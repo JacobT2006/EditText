@@ -5,7 +5,7 @@
   "description": "A desktop notes app",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JacobT2006/Unix-Notes"
+    "url": "https://github.com/JacobT2006/EditText"
   },
   "license": "MIT",
   "author": "JacobT2006",
@@ -16,9 +16,59 @@
   },
   "scripts": {
     "start": "electron .",
+    "start:prod": "cross-env NODE_ENV=production electron .",
+    "build:prod": "cross-env NODE_ENV=production electron-builder build --mac --win --linux",
+    "build:mac": "cross-env NODE_ENV=production electron-builder build --mac",
+    "build:win": "cross-env NODE_ENV=production electron-builder build --win --x64",
+    "build:linux": "cross-env NODE_ENV=production electron-builder build --linux",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "electron": "44.7.0"
+    "cross-env": "^10.1.0",
+    "electron": "44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.jacobt2006.edittext",
+    "productName": "EditText",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styleIndex.css",
+      "Assets/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
   }
 }

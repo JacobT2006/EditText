@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
-const isDev = !app.isPackaged;
+const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 
 // KEEP EACH WINDOW'S OPEN NOTES SEPARATE.
 const documentsByWindow = new Map();
@@ -431,6 +431,9 @@ ipcMain.on('settings:auto-save-menu-state', (_event, enabled) => {
     autoSaveMenuItem.checked = enabled;
   }
 });
+
+
+app.setName('Jacob APP');
 
 // START THE APP AND RESTORE ITS WINDOW WHEN REACTIVATED.
 app.whenReady().then(() => {
