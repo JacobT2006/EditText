@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { updateElectronApp } = require('update-electron-app');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
@@ -436,6 +437,7 @@ ipcMain.on('settings:auto-save-menu-state', (_event, enabled) => {
 
 
 app.setName('EditText');
+updateElectronApp();
 
 // START THE APP AND RESTORE ITS WINDOW WHEN REACTIVATED.
 app.whenReady().then(() => {

@@ -45,13 +45,14 @@
     ],
     "asar": true,
     "mac": {
+      "icon": "Assets/AppIcon.icns",
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "category": "public.app-category.productivity"
     },
     "win": {
+      "icon": "Assets/AppIcon.ico",
       "target": [
         {
           "target": "nsis",
@@ -67,8 +68,12 @@
       "allowToChangeInstallationDirectory": true
     },
     "linux": {
+      "icon": "Assets/AppIcon-512.png",
       "target": "AppImage",
       "category": "Utility"
     }
+  },
+  "dependencies": {
+    "update-electron-app": "^3.3.0"
   }
 }
