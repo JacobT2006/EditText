@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { app, autoUpdater, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const { updateElectronApp } = require('update-electron-app');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -435,9 +435,47 @@ ipcMain.on('settings:auto-save-menu-state', (_event, enabled) => {
   }
 });
 
+// CHECK THE CONFIGURED RELEASE FEED WHEN REQUESTED FROM SETTINGS.
+ipcMain.handle('updates:check', async (event) => {
+  if (!app.isPackaged) {
+    return { status: 'unavailable', message: 'Updates are available in installed releases.' };
+  }
+  if (process.platform === 'linux') {
+    return { status: 'unavailable', message: 'Automatic updates are not supported on Linux yet.' };
+  }
+  try {
+    event.sender.send('updates:status', { status: 'checking', message: 'Checking for updates…' });
+    await appUpdateChecker();
+    return { status: 'checking', message: 'Checking for updates…' };
+  } catch (error) {
+    return { status: 'error', message: `Could not check for updates: ${error.message}` };
+  }
+});
+
 
 app.setName('EditText');
+const appUpdateChecker = () => autoUpdater.checkForUpdates();
 updateElectronApp();
+
+// REPORT UPDATE EVENTS TO OPEN SETTINGS WINDOWS.
+for (const [eventName, status, message] of [
+  ['update-available', 'available', 'An update is available and is downloading…'],
+  ['update-not-available', 'current', 'You’re using the latest version.'],
+  ['update-downloaded', 'downloaded', 'Update downloaded. Restart the app to install it.'],
+  ['error', 'error', 'Update check failed. Check your connection and try again.'],
+]) {
+  autoUpdater.on(eventName, (_event, error) => {
+    const detail = eventName === 'error' && error?.message ? ` ${error.message}` : '';
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('updates:status', {
+          status,
+          message: `${message}${detail}`,
+        });
+      }
+    }
+  });
+}
 
 // START THE APP AND RESTORE ITS WINDOW WHEN REACTIVATED.
 app.whenReady().then(() => {

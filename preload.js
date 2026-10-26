@@ -35,6 +35,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (settings) => ipcRenderer.invoke('settings:set', settings),
     syncAutoSaveMenuState: (enabled) => ipcRenderer.send('settings:auto-save-menu-state', enabled),
   },
+  updates: {
+    check: () => ipcRenderer.invoke('updates:check'),
+    onStatus: (callback) => {
+      const listener = (_event, updateStatus) => callback(updateStatus);
+      ipcRenderer.on('updates:status', listener);
+      return () => ipcRenderer.removeListener('updates:status', listener);
+    },
+  },
   // SEND APP MENU COMMANDS TO THE RENDERER.
   executeCommand: (command) => ipcRenderer.invoke('app:command', command),
   onCommand: (callback) => {

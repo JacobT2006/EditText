@@ -17,6 +17,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const autoSaveDelayInput = document.getElementById('auto-save-delay');
   const fontSizeInput = document.getElementById('font-size');
   const wordWrapInput = document.getElementById('word-wrap');
+  const updateStatus = document.getElementById('update-status');
+  const checkUpdatesButton = document.getElementById('check-updates');
   const searchBar = document.getElementById('search-bar');
   const searchInput = document.getElementById('search-input');
   const fileMenuTrigger = document.getElementById('file-menu-trigger');
@@ -93,6 +95,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       setStatus(`Could not load settings: ${error.message}`);
     }
   }
+
+  // REQUEST A RELEASE CHECK AND DISPLAY UPDATER EVENTS.
+  checkUpdatesButton.addEventListener('click', async () => {
+    checkUpdatesButton.disabled = true;
+    updateStatus.textContent = 'Checking for updates…';
+    try {
+      const result = await window.electronAPI.updates.check();
+      updateStatus.textContent = result.message;
+      checkUpdatesButton.disabled = result.status === 'checking';
+    } catch (error) {
+      updateStatus.textContent = `Could not check for updates: ${error.message}`;
+      checkUpdatesButton.disabled = false;
+    }
+  });
+  window.electronAPI.updates.onStatus(({ status, message }) => {
+    updateStatus.textContent = message;
+    checkUpdatesButton.disabled = status === 'checking' || status === 'available';
+  });
 
   // REBUILD THE OPEN-NOTE LIST AND ITS CLOSE CONTROLS.
   function renderTabs() {

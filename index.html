@@ -138,6 +138,13 @@
                     <input id="word-wrap" type="checkbox" title="Wrap long note lines">
                 </label>
             </section>
+            <section class="settings-section update-settings" aria-labelledby="update-settings-title">
+                <h3 id="update-settings-title">Software updates</h3>
+                <div class="update-row">
+                    <span id="update-status" class="setting-description" role="status" aria-live="polite">Check GitHub for a newer release.</span>
+                    <button id="check-updates" class="secondary" type="button">Check for updates</button>
+                </div>
+            </section>
             <div class="dialog-actions">
                 <button type="submit" value="cancel" class="secondary" title="Discard settings changes">Cancel</button>
                 <button id="save-settings" type="submit" value="save" title="Save app settings">Save settings</button>
