@@ -431,7 +431,10 @@ body.reordering-editors { cursor: grabbing; }
 }
 
 .tab-select {
+    display: flex;
     flex: 1;
+    align-items: center;
+    gap: 6px;
     min-width: 0;
     height: 23px;
     padding: 0;
@@ -445,6 +448,18 @@ body.reordering-editors { cursor: grabbing; }
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 11px;
+}
+
+.tab-file-icon {
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
+}
+
+.tab-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tab-select:focus-visible {

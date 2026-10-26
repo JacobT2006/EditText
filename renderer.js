@@ -33,6 +33,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   let cursorPositionFrame = null;
 
   const activeDocument = () => documents.find((document) => document.id === activeId);
+  const displayName = (name) => name.replace(/\.txt$/i, '');
   const setStatus = (message) => {
     status.textContent = message;
   };
@@ -101,22 +102,32 @@ window.addEventListener('DOMContentLoaded', async () => {
       const tab = document.createElement('div');
       tab.className = `tab${note.id === activeId ? ' active' : ''}`;
       tab.dataset.noteId = note.id;
-      tab.title = `Drag to reorder ${note.name}`;
+      tab.title = `Drag to reorder ${displayName(note.name)}`;
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', String(note.id === activeId));
 
       const select = document.createElement('button');
       select.className = 'tab-select';
       select.type = 'button';
-      select.textContent = `${note.name}${note.dirty ? ' •' : ''}`;
-      select.title = `Switch to ${note.name}`;
+      select.title = `Switch to ${displayName(note.name)}`;
+
+      const icon = document.createElement('img');
+      icon.className = 'tab-file-icon';
+      icon.src = 'Assets/Text.svg';
+      icon.alt = '';
+      icon.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.className = 'tab-label';
+      label.textContent = `${displayName(note.name)}${note.dirty ? ' •' : ''}`;
+      select.append(icon, label);
       select.addEventListener('click', () => activateDocument(note.id));
 
       const close = document.createElement('button');
       close.className = 'tab-close';
       close.type = 'button';
-      close.setAttribute('aria-label', `Close ${note.name}`);
-      close.title = `Close ${note.name}`;
+      close.setAttribute('aria-label', `Close ${displayName(note.name)}`);
+      close.title = `Close ${displayName(note.name)}`;
       close.addEventListener('click', (event) => {
         event.stopPropagation();
         closeDocument(note.id);
@@ -148,7 +159,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     activeId = id;
     editor.value = document.content;
     editor.disabled = false;
-    breadcrumbName.textContent = document.name;
+    breadcrumbName.textContent = displayName(document.name);
     renderTimeline(document);
     if (cursorPositionFrame !== null) { //O(1)
       cancelAnimationFrame(cursorPositionFrame);
@@ -237,14 +248,18 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (tab) { //O(1)
         const select = tab.querySelector('.tab-select');
         const close = tab.querySelector('.tab-close');
-        select.textContent = `${document.name}${document.dirty ? ' •' : ''}`;
-        select.title = `Switch to ${document.name}`;
-        close.setAttribute('aria-label', `Close ${document.name}`);
-        close.title = `Close ${document.name}`;
-        tab.title = `Drag to reorder ${document.name}`;
+        select.querySelector('.tab-label').textContent =
+          `${displayName(document.name)}${document.dirty ? ' •' : ''}`;
+        select.title = `Switch to ${displayName(document.name)}`;
+        close.setAttribute('aria-label', `Close ${displayName(document.name)}`);
+        close.title = `Close ${displayName(document.name)}`;
+        tab.title = `Drag to reorder ${displayName(document.name)}`;
       }
     }
     const active = activeDocument();
+    if (active) {
+      breadcrumbName.textContent = displayName(active.name);
+    }
     setStatus(active?.dirty ? 'Unsaved note changes' : '');
   }
 

@@ -116,15 +116,16 @@ const contextMenu = Menu.buildFromTemplate([
   { role: 'cut' },
   { role: 'copy' },
   { role: 'paste' },
-  { type: 'separator' },
-  {
-    label: 'Toggle Developer Tools',
-    enabled: isDev,
-    accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-    click(_item, focusedWindow) {
-      focusedWindow?.webContents.toggleDevTools();
-    },
-  },
+  { role: 'selectAll'}
+  // { type: 'separator' },
+  // {
+  //   label: 'Toggle Developer Tools',
+  //   enabled: isDev,
+  //   accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+  //   click(_item, focusedWindow) {
+  //     focusedWindow?.webContents.toggleDevTools();
+  //   },
+  // },
 ]);
 
 // KEEP THE AUTO-SAVE MENU CHECKBOX IN SYNC WITH SETTINGS.
@@ -177,6 +178,7 @@ const menuTemplate = [
             { role: 'hideOthers' },
             { role: 'unhide' },
             { type: 'separator' },
+            { role: 'forceReload' },
             { role: 'quit' },
           ],
         },
