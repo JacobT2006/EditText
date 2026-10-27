@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Assets/AppIcon-512.png" alt="EditText icon" width="128">
+  <img src="Assets/AppIcon-512.png" alt="EditText icon" width="128" style="border-radius: 22%;">
   <h1>EditText</h1>
   <p>A simple desktop app for writing and organizing plain-text notes.</p>
 </div>
