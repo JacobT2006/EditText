@@ -5,7 +5,7 @@ The Timeline shows when the active note was last saved.
 
 ## Start the notes app
 
-Requires Node.js 22.12.0 or newer.
+Requires Node.js 26.10.0 or newer.
 
 ```sh
 npm install

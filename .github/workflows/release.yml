@@ -29,14 +29,14 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Check out selected branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.12.0
+          node-version: 26.10.0
 
       - name: Increment app version
         id: version
@@ -65,34 +65,36 @@ jobs:
         include:
           - platform: macOS
             os: macos-latest
-            command: npm run build:mac -- --publish never
+            command: npx electron-builder build --mac --publish never
           - platform: Windows
             os: windows-latest
-            command: npm run build:win -- --publish never
+            command: npx electron-builder build --win --x64 --publish never
           - platform: Linux
             os: ubuntu-latest
-            command: npm run build:linux -- --publish never
+            command: npx electron-builder build --linux --publish never
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out release tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.12.0
+          node-version: 26.10.0
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build release artifacts
+        env:
+          NODE_ENV: production
         run: ${{ matrix.command }}
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-${{ matrix.platform }}
           path: dist/*
@@ -105,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: dist
           merge-multiple: true
