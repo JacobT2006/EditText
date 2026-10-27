@@ -53,6 +53,8 @@
     ],
     "mac": {
       "icon": "Assets/AppIcon.icns",
+      "identity": null,
+      "hardenedRuntime": false,
       "target": [
         "dmg",
         "zip"
