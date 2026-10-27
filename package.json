@@ -1,8 +1,8 @@
 {
   "name": "EditText",
-  "version": "1.1.0",
+  "version": "0.1.0",
   "productName": "EditText",
-  "description": "A desktop notes app",
+  "description": "A desktop notes app that saves for you",
   "repository": {
     "type": "git",
     "url": "https://github.com/JacobT2006/EditText"

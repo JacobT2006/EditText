@@ -117,4 +117,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
           VERSION: ${{ needs.prepare.outputs.version }}
-        run: gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "EditText $VERSION" --generate-notes
+        run: |
+          mapfile -d '' ASSETS < <(find dist -maxdepth 1 -type f -print0)
+          if (( ${#ASSETS[@]} == 0 )); then
+            echo "No release files found in dist/" >&2
+            exit 1
+          fi
+          gh release create "$TAG" "${ASSETS[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "EditText $VERSION" \
+            --generate-notes
