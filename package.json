@@ -1,6 +1,10 @@
 {
   "name": "EditText",
+<<<<<<< HEAD
   "version": "0.1.0",
+=======
+  "version": "1.1.1",
+>>>>>>> a28d3ff8cf57274504993072f3c2d46b91d1f994
   "productName": "EditText",
   "description": "A desktop notes app that saves for you",
   "repository": {
