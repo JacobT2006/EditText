@@ -1,5 +1,5 @@
-const { app, autoUpdater, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
-const { updateElectronApp } = require('update-electron-app');
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
@@ -440,9 +440,6 @@ ipcMain.handle('updates:check', async (event) => {
   if (!app.isPackaged) {
     return { status: 'unavailable', message: 'Updates are available in installed releases.' };
   }
-  if (process.platform === 'linux') {
-    return { status: 'unavailable', message: 'Automatic updates are not supported on Linux yet.' };
-  }
   try {
     event.sender.send('updates:status', { status: 'checking', message: 'Checking for updates…' });
     await appUpdateChecker();
@@ -452,35 +449,55 @@ ipcMain.handle('updates:check', async (event) => {
   }
 });
 
+// INSTALL A DOWNLOADED UPDATE AND RESTART THE APP.
+ipcMain.handle('updates:install', () => {
+  if (!app.isPackaged) {
+    return false;
+  }
+  autoUpdater.quitAndInstall();
+  return true;
+});
+
 
 app.setName('EditText');
 const appUpdateChecker = () => autoUpdater.checkForUpdates();
-updateElectronApp();
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 
 // REPORT UPDATE EVENTS TO OPEN SETTINGS WINDOWS.
-for (const [eventName, status, message] of [
-  ['update-available', 'available', 'An update is available and is downloading…'],
-  ['update-not-available', 'current', 'You’re using the latest version.'],
-  ['update-downloaded', 'downloaded', 'Update downloaded. Restart the app to install it.'],
-  ['error', 'error', 'Update check failed. Check your connection and try again.'],
-]) {
-  autoUpdater.on(eventName, (_event, error) => {
-    const detail = eventName === 'error' && error?.message ? ` ${error.message}` : '';
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send('updates:status', {
-          status,
-          message: `${message}${detail}`,
-        });
-      }
+function sendUpdateStatus(status, message) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('updates:status', { status, message });
     }
-  });
+  }
 }
+
+autoUpdater.on('checking-for-update', () => {
+  sendUpdateStatus('checking', 'Checking for updates…');
+});
+autoUpdater.on('update-available', () => {
+  sendUpdateStatus('available', 'An update is available and is downloading…');
+});
+autoUpdater.on('update-not-available', () => {
+  sendUpdateStatus('current', 'You’re using the latest version.');
+});
+autoUpdater.on('update-downloaded', () => {
+  sendUpdateStatus('downloaded', 'Update downloaded. Restart the app to install it.');
+});
+autoUpdater.on('error', (error) => {
+  sendUpdateStatus('error', `Update check failed: ${error.message}`);
+});
 
 // START THE APP AND RESTORE ITS WINDOW WHEN REACTIVATED.
 app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
   createWindow();
+  if (app.isPackaged) {
+    appUpdateChecker().catch((error) => {
+      sendUpdateStatus('error', `Update check failed: ${error.message}`);
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) { //O(1)

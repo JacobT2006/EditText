@@ -67,6 +67,36 @@ body.platform-macos .file-menu {
     display: none;
 }
 
+body:not(.platform-macos) .window-controls {
+    top: 0;
+    right: 8px;
+    left: auto;
+}
+
+body:not(.platform-macos) .file-menu {
+    left: 8px;
+}
+
+body:not(.platform-macos) .control-btn {
+    width: 42px;
+    height: 35px;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+body:not(.platform-macos) .control-btn::after {
+    background-color: #ddd;
+}
+
+body:not(.platform-macos) .control-btn:hover {
+    background: #393939;
+}
+
+body:not(.platform-macos) .control-btn.close:hover {
+    background: #c42b1c;
+}
+
 .control-btn {
     position: relative;
     width: 13px;

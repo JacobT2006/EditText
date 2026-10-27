@@ -33,6 +33,8 @@ To build for one platform, use `npm run build:mac`, `npm run build:win`, or
 `npm run build:linux`. Build outputs are written to `dist/`. Cross-platform
 packaging may require platform-specific tooling; for best results, build each
 release on its target operating system. Windows packages target x64.
+Linux builds are AppImages. Installed macOS, Windows, and AppImage builds check
+GitHub Releases for updates; update installation starts when the app quits.
 
 ## Publish a release
 

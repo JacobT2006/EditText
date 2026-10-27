@@ -1,4 +1,13 @@
 document.body.classList.toggle('platform-macos', window.electronAPI.platform === 'darwin');
+document.body.classList.toggle('platform-windows', window.electronAPI.platform === 'win32');
+document.body.classList.toggle('platform-linux', window.electronAPI.platform === 'linux');
+const shortcutModifier = window.electronAPI.platform === 'darwin' ? '⌘' : 'Ctrl';
+for (const command of ['new', 'open', 'save', 'save-as']) {
+  const shortcut = document.querySelector(`[data-command="${command}"] span`);
+  if (shortcut) {
+    shortcut.textContent = shortcut.textContent.replace('⌘/Ctrl', shortcutModifier);
+  }
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
   // CACHE NOTE UI ELEMENTS AND SESSION STATE.
@@ -29,6 +38,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   let autoSave = true;
   let autoSaveDelay = 800;
   let closeRequested = false;
+  let updateReady = false;
   let tabDrag = null;
   let explorerWidth = 240;
   let resizePointerId = null;
@@ -99,6 +109,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   // REQUEST A RELEASE CHECK AND DISPLAY UPDATER EVENTS.
   checkUpdatesButton.addEventListener('click', async () => {
     checkUpdatesButton.disabled = true;
+    if (updateReady) {
+      try {
+        await window.electronAPI.updates.install();
+      } catch (error) {
+        updateStatus.textContent = `Could not install update: ${error.message}`;
+        checkUpdatesButton.disabled = false;
+      }
+      return;
+    }
     updateStatus.textContent = 'Checking for updates…';
     try {
       const result = await window.electronAPI.updates.check();
@@ -110,7 +129,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
   window.electronAPI.updates.onStatus(({ status, message }) => {
+    updateReady = status === 'downloaded';
     updateStatus.textContent = message;
+    checkUpdatesButton.textContent = updateReady ? 'Restart to update' : 'Check for updates';
     checkUpdatesButton.disabled = status === 'checking' || status === 'available';
   });
 
@@ -506,6 +527,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('maximize-btn').addEventListener('click', () => {
     window.electronAPI.window.toggleMaximize();
   });
+  if (window.electronAPI.platform !== 'darwin') {
+    document.querySelector('.title-bar').addEventListener('dblclick', (event) => {
+      if (!event.target.closest('button, .window-controls, .file-menu')) {
+        window.electronAPI.window.toggleMaximize();
+      }
+    });
+  }
   window.electronAPI.window.onMaximizeState((isMaximized) => {
     const maximizeButton = document.getElementById('maximize-btn');
     const action = isMaximized ? 'shrink' : 'expand';
