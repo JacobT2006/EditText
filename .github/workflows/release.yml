@@ -72,6 +72,7 @@ jobs:
     name: Publish GitHub release
     needs: [version, build]
     runs-on: ubuntu-latest
+    environment: Release
     steps:
       - name: Download release artifacts
         uses: actions/download-artifact@v6
