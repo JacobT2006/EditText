@@ -13,54 +13,85 @@ on:
           - major
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: manual-release
   cancel-in-progress: false
 
 jobs:
-  open-pr:
-    name: Open version bump PR
+  codeql:
+    name: CodeQL
+    # Release only from the default branch. Downstream jobs are skipped with it.
     if: github.ref_name == github.event.repository.default_branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create release app token
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/codeql.yml
 
-      - name: Check out default branch
+  version:
+    name: Compute next version
+    needs: codeql
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+    steps:
+      - name: Check out with tags
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref_name }}
-          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26.10.0
-
-      - name: Bump version and open pull request
+      - name: Compute next version from latest tag
+        id: next
         env:
           BUMP: ${{ inputs.bump }}
-          BASE: ${{ github.ref_name }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          npm version "$BUMP" --no-git-tag-version
-          VERSION="$(node -p "require('./package.json').version")"
-          TAG="v${VERSION}"
-          BRANCH="release/${TAG}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
-          git add package.json package-lock.json
-          git commit -m "chore: release ${TAG}"
-          git push origin "$BRANCH"
-          gh pr create \
-            --base "$BASE" \
-            --head "$BRANCH" \
-            --title "chore: release ${TAG}" \
-            --body "Version bump (\`${BUMP}\`) for ${TAG}. Merging this PR builds and publishes the release."
+          LAST="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          LAST="${LAST:-v0.0.0}"
+          IFS=. read -r MA MI PA <<< "${LAST#v}"
+          case "$BUMP" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          echo "Previous: ${LAST}  Next: v${MA}.${MI}.${PA}"
+          echo "version=${MA}.${MI}.${PA}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: version
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.version.outputs.version }}
+
+  publish:
+    name: Publish GitHub release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release and attach installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          mapfile -d '' ASSETS < <(find dist -maxdepth 1 -type f -print0)
+          if (( ${#ASSETS[@]} == 0 )); then
+            echo "No release files found in dist/" >&2
+            exit 1
+          fi
+          gh release create "v${VERSION}" "${ASSETS[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "EditText ${VERSION}" \
+            --generate-notes
