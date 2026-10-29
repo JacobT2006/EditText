@@ -1,4 +1,4 @@
-name: Build and publish release
+name: Release
 
 on:
   workflow_dispatch:
@@ -20,90 +20,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prepare:
-    name: Bump version and tag release
-    if: github.ref_type == 'branch'
+  codeql:
+    name: CodeQL
+    # Release only from the default branch. Downstream jobs are skipped with it.
+    if: github.ref_name == github.event.repository.default_branch
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/codeql.yml
+
+  version:
+    name: Compute next version
+    needs: codeql
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.next.outputs.version }}
     steps:
-      - name: Check out selected branch
+      - name: Check out with tags
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26.10.0
-
-      - name: Increment app version
-        id: version
+      - name: Compute next version from latest tag
+        id: next
         env:
           BUMP: ${{ inputs.bump }}
         run: |
-          npm version "$BUMP" --no-git-tag-version
-          VERSION="$(node -p "require('./package.json').version")"
-          TAG="v${VERSION}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git commit -m "chore: release ${TAG}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          git tag "$TAG"
-          git push origin "$TAG"
+          LAST="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          LAST="${LAST:-v0.0.0}"
+          IFS=. read -r MA MI PA <<< "${LAST#v}"
+          case "$BUMP" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          echo "Previous: ${LAST}  Next: v${MA}.${MI}.${PA}"
+          echo "version=${MA}.${MI}.${PA}" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build ${{ matrix.platform }}
-    needs: prepare
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macOS
-            os: macos-latest
-            command: npx electron-builder build --mac --publish never
-          - platform: Windows
-            os: windows-latest
-            command: npx electron-builder build --win --x64 --publish never
-          - platform: Linux
-            os: ubuntu-latest
-            command: npx electron-builder build --linux --publish never
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Check out release tag
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.prepare.outputs.tag }}
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26.10.0
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build release artifacts
-        env:
-          NODE_ENV: production
-        run: ${{ matrix.command }}
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: release-${{ matrix.platform }}
-          path: dist/*
-          if-no-files-found: error
-          retention-days: 7
+    name: Build
+    needs: version
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.version.outputs.version }}
 
   publish:
     name: Publish GitHub release
-    needs: [prepare, build]
+    needs: [version, build]
     runs-on: ubuntu-latest
     steps:
       - name: Download release artifacts
@@ -115,15 +82,16 @@ jobs:
       - name: Publish release and attach installers
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.prepare.outputs.tag }}
-          VERSION: ${{ needs.prepare.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ github.sha }}
         run: |
           mapfile -d '' ASSETS < <(find dist -maxdepth 1 -type f -print0)
           if (( ${#ASSETS[@]} == 0 )); then
             echo "No release files found in dist/" >&2
             exit 1
           fi
-          gh release create "$TAG" "${ASSETS[@]}" \
+          gh release create "v${VERSION}" "${ASSETS[@]}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "EditText $VERSION" \
+            --target "$SHA" \
+            --title "EditText ${VERSION}" \
             --generate-notes
