@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (tag, branch, or SHA) to build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            os: macos-latest
+            command: npx electron-builder build --mac --publish never
+          - platform: Windows
+            os: windows-latest
+            command: npx electron-builder build --win --x64 --publish never
+          - platform: Linux
+            os: ubuntu-latest
+            command: npx electron-builder build --linux --publish never
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26.10.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release artifacts
+        env:
+          NODE_ENV: production
+        run: ${{ matrix.command }}
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
