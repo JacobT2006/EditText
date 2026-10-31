@@ -50,6 +50,7 @@ jobs:
       - name: Apply release version (not committed)
         env:
           VERSION: ${{ inputs.version }}
+        shell: bash
         run: npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Build release artifacts
