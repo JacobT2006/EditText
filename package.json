@@ -85,7 +85,8 @@
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.11"
+    "electron-updater": "^6.8.11",
+    "fuse.js": "^7.5.0"
   },
   "overrides": {
     "undici": "^7.30.1",

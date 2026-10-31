@@ -628,7 +628,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     clearTabDrag();
   });
 
-  // CONNECT NOTE SEARCH AND NOTES MENU COMMANDS.
+  // CONNECT NOTE SEARCH AND NOTES MENU COMMANDS.                            Implement fuzy search using fuse.js
   document.getElementById('find-note').addEventListener('click', () => {
     searchBar.hidden = false;
     searchInput.focus();
@@ -640,6 +640,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     searchBar.hidden = true;
     editor.focus();
   });
+
+
+
+
   fileMenuTrigger.addEventListener('click', () => {
     const isOpen = !fileMenu.hidden;
     fileMenu.hidden = isOpen;
