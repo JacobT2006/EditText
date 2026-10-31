@@ -17,8 +17,6 @@ module.exports = {
         config: {
           authors: 'JacobT2006',
           description: 'My application',
-          certificateFile: './cert.pfx', // Example for Squirrel.Windows
-          certificatePassword: process.env.CERTIFICATE_PASSWORD,
         },
       },
     ],

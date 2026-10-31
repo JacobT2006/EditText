@@ -63,7 +63,7 @@ jobs:
     needs: version
     permissions:
       contents: read
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/Build.yml
     with:
       ref: ${{ github.sha }}
       version: ${{ needs.version.outputs.version }}
@@ -72,6 +72,7 @@ jobs:
     name: Publish GitHub release
     needs: [version, build]
     runs-on: ubuntu-latest
+    environment: Release
     steps:
       - name: Download release artifacts
         uses: actions/download-artifact@v6

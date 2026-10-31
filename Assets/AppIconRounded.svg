@@ -1,0 +1,11 @@
+<svg width="142" height="128" viewBox="0 0 142 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="rounded-corners">
+      <rect width="142" height="128" rx="28" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#rounded-corners)">
+    <rect width="142" height="128" fill="#502D7F" />
+    <text x="71" y="84" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#FFFFFF" text-anchor="middle">eT</text>
+  </g>
+</svg>

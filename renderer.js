@@ -1,5 +1,12 @@
+// import for fuzzy search
+import Fuse from "fuse.js";
+const Fuse = require('fuse.js')
+
+// toggle mac
 document.body.classList.toggle('platform-macos', window.electronAPI.platform === 'darwin');
+// toggle windows
 document.body.classList.toggle('platform-windows', window.electronAPI.platform === 'win32');
+// toggle linux
 document.body.classList.toggle('platform-linux', window.electronAPI.platform === 'linux');
 const shortcutModifier = window.electronAPI.platform === 'darwin' ? '⌘' : 'Ctrl';
 for (const command of ['new', 'open', 'save', 'save-as']) {
@@ -628,7 +635,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     clearTabDrag();
   });
 
-  // CONNECT NOTE SEARCH AND NOTES MENU COMMANDS.
+  // CONNECT NOTE SEARCH AND NOTES MENU COMMANDS.                            Implement fuzy search using fuse.js
   document.getElementById('find-note').addEventListener('click', () => {
     searchBar.hidden = false;
     searchInput.focus();
@@ -640,6 +647,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     searchBar.hidden = true;
     editor.focus();
   });
+
+
+
+
   fileMenuTrigger.addEventListener('click', () => {
     const isOpen = !fileMenu.hidden;
     fileMenu.hidden = isOpen;
