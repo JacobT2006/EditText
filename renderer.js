@@ -1,5 +1,12 @@
+// import for fuzzy search
+import Fuse from "fuse.js";
+const Fuse = require('fuse.js')
+
+// toggle mac
 document.body.classList.toggle('platform-macos', window.electronAPI.platform === 'darwin');
+// toggle windows
 document.body.classList.toggle('platform-windows', window.electronAPI.platform === 'win32');
+// toggle linux
 document.body.classList.toggle('platform-linux', window.electronAPI.platform === 'linux');
 const shortcutModifier = window.electronAPI.platform === 'darwin' ? '⌘' : 'Ctrl';
 for (const command of ['new', 'open', 'save', 'save-as']) {
