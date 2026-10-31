@@ -134,6 +134,8 @@ Maintainers review and merge changes into `Dev`. To promote changes, maintainers
 
 Maintainers create releases from the **Actions** tab on the default branch by running the **Release** workflow and choosing a patch, minor, or major version bump. The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
 
+Release builds are unsigned and do not require certificates, notarization keys, or signing-related GitHub secrets. macOS and Windows may show security warnings for unsigned apps; users may need to explicitly allow the app to open or install it.
+
 If `Dev` advances while your pull request is open, update your branch with:
 
 ```bash

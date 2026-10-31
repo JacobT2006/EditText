@@ -44,6 +44,7 @@
       "package.json"
     ],
     "asar": true,
+    "forceCodeSigning": false,
     "publish": [
       {
         "provider": "github",

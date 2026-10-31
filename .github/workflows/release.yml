@@ -63,7 +63,7 @@ jobs:
     needs: version
     permissions:
       contents: read
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/Build.yml
     with:
       ref: ${{ github.sha }}
       version: ${{ needs.version.outputs.version }}
