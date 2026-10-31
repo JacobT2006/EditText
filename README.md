@@ -132,7 +132,7 @@ GitHub Actions runs CodeQL on pull requests targeting `main`. The release workfl
 
 Maintainers review and merge changes into `Dev`. To promote changes, maintainers open a pull request from `Dev` into `main`. The `main` branch requires one approving review, code owner review, passing required checks, and signed commits; use **Squash and merge** so GitHub signs the resulting commit.
 
-Maintainers create releases from the **Actions** tab on the default branch by running the **Release** workflow and choosing a patch, minor, or major version bump. The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
+Maintainers create releases from the **Actions** tab by running the **Release** workflow and selecting a channel. Run `stable` from `main` (the default branch), or run `alpha`/`beta` from `Dev`. The workflow infers the version bump from commits since the latest stable tag: Conventional Commit `feat` messages select a minor bump, `fix` and `perf` select a patch bump, and `!` or a `BREAKING CHANGE:` footer selects a major bump. Common title prefixes such as `Add` and `Fix` are also recognized; if no commit indicates a larger change, a manually requested release defaults to patch. Prerelease numbers increment independently per channel (for example, `1.2.0-alpha.0`). The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
 
 Release builds are unsigned and do not require certificates, notarization keys, or signing-related GitHub secrets. macOS and Windows may show security warnings for unsigned apps; users may need to explicitly allow the app to open or install it.
 

@@ -3,14 +3,14 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: Version increment for this release
+      channel:
+        description: Stable releases use the default branch; prereleases use Dev
         required: true
         type: choice
         options:
-          - patch
-          - minor
-          - major
+          - stable
+          - alpha
+          - beta
 
 permissions:
   contents: write
@@ -20,10 +20,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate release request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check release channel and branch
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "$CHANNEL" == "stable" && "$REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "Stable releases must be dispatched from $DEFAULT_BRANCH." >&2
+            exit 1
+          fi
+          if [[ "$CHANNEL" != "stable" && "$REF_NAME" != "Dev" ]]; then
+            echo "Alpha and beta releases must be dispatched from Dev." >&2
+            exit 1
+          fi
+
   codeql:
     name: CodeQL
-    # Release only from the default branch. Downstream jobs are skipped with it.
-    if: github.ref_name == github.event.repository.default_branch
+    needs: validate
     permissions:
       actions: read
       contents: read
@@ -45,18 +63,8 @@ jobs:
       - name: Compute next version from latest tag
         id: next
         env:
-          BUMP: ${{ inputs.bump }}
-        run: |
-          LAST="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
-          LAST="${LAST:-v0.0.0}"
-          IFS=. read -r MA MI PA <<< "${LAST#v}"
-          case "$BUMP" in
-            major) MA=$((MA+1)); MI=0; PA=0 ;;
-            minor) MI=$((MI+1)); PA=0 ;;
-            patch) PA=$((PA+1)) ;;
-          esac
-          echo "Previous: ${LAST}  Next: v${MA}.${MI}.${PA}"
-          echo "version=${MA}.${MI}.${PA}" >> "$GITHUB_OUTPUT"
+          CHANNEL: ${{ inputs.channel }}
+        run: node .github/scripts/compute-release-version.js
 
   build:
     name: Build
@@ -85,13 +93,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
           SHA: ${{ github.sha }}
+          CHANNEL: ${{ inputs.channel }}
         run: |
           mapfile -d '' ASSETS < <(find dist -maxdepth 1 -type f -print0)
           if (( ${#ASSETS[@]} == 0 )); then
             echo "No release files found in dist/" >&2
             exit 1
           fi
-          gh release create "v${VERSION}" "${ASSETS[@]}" \
+          RELEASE_ARGS=()
+          if [[ "$CHANNEL" != "stable" ]]; then
+            RELEASE_ARGS+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" "${ASSETS[@]}" "${RELEASE_ARGS[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$SHA" \
             --title "EditText ${VERSION}" \
