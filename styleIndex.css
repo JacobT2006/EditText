@@ -126,14 +126,14 @@ body:not(.platform-macos) .control-btn.close:hover {
 
 .control-btn.close::after {
     background-color: #111;
-    mask: url('Assets/Close.svg') center / contain no-repeat;
-    -webkit-mask: url('Assets/Close.svg') center / contain no-repeat;
+    mask: url('Assets/Close.svg') center / 20px 20px no-repeat;
+    -webkit-mask: url('Assets/Close.svg') center / 20px 20px no-repeat;
 }
 
 .control-btn.minimize::after {
     background-color: #111;
-    mask: url('Assets/Minimize.svg') center / contain no-repeat;
-    -webkit-mask: url('Assets/Minimize.svg') center / contain no-repeat;
+    mask: url('Assets/Minimize.svg') center / 20px 20px no-repeat;
+    -webkit-mask: url('Assets/Minimize.svg') center / 20px 20px no-repeat;
 }
 
 .control-btn.maximize::after {
@@ -141,10 +141,10 @@ body:not(.platform-macos) .control-btn.close:hover {
     background-color: #111;
     mask-position: center;
     mask-repeat: no-repeat;
-    mask-size: 10px 10px;
+    mask-size: 16px 16px;
     -webkit-mask-position: center;
     -webkit-mask-repeat: no-repeat;
-    -webkit-mask-size: 10px 10px;
+    -webkit-mask-size: 16px 16px;
 }
 
 .control-btn.maximize[data-maximize-action="expand"]::after {
@@ -258,8 +258,8 @@ body:not(.platform-macos) .control-btn.close:hover {
     -webkit-mask-image: url('Assets/FileCopy.svg');
 }
 .activity-icon.three {
-    mask-image: url('Assets/Plus.svg');
-    -webkit-mask-image: url('Assets/Plus.svg');
+    mask-image: url('Assets/plus.svg');
+    -webkit-mask-image: url('Assets/plus.svg');
 }
 .activity-icon.one {
     mask-image: url('Assets/DocumentSearch.svg');
@@ -276,8 +276,8 @@ body:not(.platform-macos) .control-btn.close:hover {
 }
 .activity-icon.two {
     margin-bottom: 14px;
-    mask-image: url('Assets/Quit.svg');
-    -webkit-mask-image: url('Assets/Quit.svg');
+    mask-image: url('Assets/quit.svg');
+    -webkit-mask-image: url('Assets/quit.svg');
 }
 
 .explorer {
