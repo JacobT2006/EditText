@@ -29,7 +29,10 @@ EditText is a desktop text editor built with Electron. It works with ordinary `.
 - Reorder open notes and resize the notes explorer.
 - Adjust auto-save timing, text size, and line wrapping in Settings.
 - Check for and install app updates from Settings.
+- Browse GitHub-hosted community plugins in an in-app store, with CSS-only UI styling or explicitly trusted note-processing modes.
 - Available for macOS, Windows, and Linux.
+
+See the [plugin creation walkthrough](PLUGIN_GUIDE.md) for plugin package formats, permissions, installation, and community submissions.
 
 ## Install
 
@@ -58,7 +61,7 @@ Use the search button in the left toolbar to find text in the current note. Sett
 
 ## Run from source
 
-You need [Node.js](https://nodejs.org/) `26.10.0` or newer and npm. From the project directory:
+You need [Node.js](https://nodejs.org/) `26.12.1` or newer and npm. From the project directory:
 
 ```bash
 npm ci
@@ -91,7 +94,7 @@ Contributions are welcome. The `main` branch is protected, so changes are submit
 ### Development workflow
 
 1. Fork the repository, or clone it if you have write access.
-2. Install Node.js `26.10.0` or newer, then install dependencies and launch the app:
+2. Install Node.js `26.12.1` or newer, then install dependencies and launch the app:
 
    ```bash
    git clone https://github.com/<your-username>/EditText.git
@@ -130,7 +133,7 @@ GitHub Actions runs CodeQL on pull requests targeting `main`. The release workfl
 
 ### Review and releases
 
-Maintainers review and merge changes into `Dev`. To promote changes, maintainers open a pull request from `Dev` into `main`. The `main` branch requires one approving review, code owner review, passing required checks, and signed commits; use **Squash and merge** so GitHub signs the resulting commit.
+Maintainer (JacobT2006) will merge changes from `Dev`. To promote changes, maintainers open a pull request from `Dev` into `main`. The `main` branch requires one approving review, code owner review, passing required checks, and signed commits; use **Squash and merge** so GitHub signs the resulting commit.
 
 Maintainers create releases from the **Actions** tab by running the **Release** workflow and selecting a channel. Run `stable` from `main` (the default branch), or run `alpha`/`beta` from `Dev`. The workflow infers the version bump from commits since the latest stable tag: Conventional Commit `feat` messages select a minor bump, `fix` and `perf` select a patch bump, and `!` or a `BREAKING CHANGE:` footer selects a major bump. Common title prefixes such as `Add` and `Fix` are also recognized; if no commit indicates a larger change, a manually requested release defaults to patch. Prerelease numbers increment independently per channel (for example, `1.2.0-alpha.0`). The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
 

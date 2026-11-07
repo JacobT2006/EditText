@@ -1,15 +1,17 @@
+# [Development/build helper] Build for the host OS, then launch the app from source.
+# This script is optional and is not part of packaged app runtime.
 # Get current OS of user 
 case "$(uname -s)" in
     Darwin*)
-        # Run mac build when detected os is mac
+        # [macOS] Build a macOS release package.
         NODE_ENV=production npx electron-builder build --mac
         ;;
     Linux*)
-        # Run linux build when detected os is Linux
+        # [Linux] Build a Linux release package.
         NODE_ENV=production npx electron-builder build --linux
         ;;
     MINGW*|MSYS*|CYGWIN*)
-        # IDK if works but evil windows UGH
+        # [Windows shells] Attempt a Windows release build from Git Bash/MSYS/Cygwin.
         NODE_ENV=production npx electron-builder build --win
         ;;
     *)
