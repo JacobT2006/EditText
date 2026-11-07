@@ -10,10 +10,8 @@
     --theme-surface-hover: #373440;
     --theme-surface-input: #22212b;
     --theme-surface-card-start: #292733;
-    --theme-surface-card-end: #22212a;
     --theme-border: #3c3b4e;
     --theme-border-subtle: #3c3a47;
-    --theme-purple-deep: #41305c;
     --theme-purple-strong: #68479a;
     --theme-purple-border: #7453a4;
     --theme-purple-accent: #9670cd;
@@ -21,7 +19,6 @@
     --theme-purple-selected: #49356a;
     --theme-purple-chip: #282631;
     --theme-purple-muted: #c5b7df;
-    --theme-purple-icon-dark: #34314e;
     --theme-black: #111;
     --theme-shadow: #0009;
     --theme-shadow-soft: #0002;
@@ -770,9 +767,7 @@ dialog {
     padding: 0;
     border: 1px solid var(--theme-border);
     border-radius: 10px;
-    background:
-        radial-gradient(ellipse at 10% 0%, var(--theme-purple-deep) 0, transparent 38%),
-        var(--theme-surface-background);
+    background: var(--theme-surface-background);
     color: #eee;
     box-shadow: 0 12px 36px var(--theme-shadow);
 }
@@ -843,7 +838,7 @@ dialog::backdrop { background: var(--theme-shadow); }
     padding: 16px;
     border: 1px solid var(--theme-border);
     border-radius: 9px;
-    background: linear-gradient(150deg, var(--theme-surface-card-start), var(--theme-surface-card-end) 70%);
+    background: var(--theme-surface-card-start);
     box-shadow: 0 5px 16px var(--theme-shadow-soft);
 }
 
@@ -1185,7 +1180,7 @@ dialog::backdrop { background: var(--theme-shadow); }
     padding: 15px;
     border: 1px solid var(--theme-border);
     border-radius: 9px;
-    background: linear-gradient(150deg, var(--theme-surface-card-start), var(--theme-surface-card-end) 70%);
+    background: var(--theme-surface-card-start);
     box-shadow: 0 5px 16px var(--theme-shadow-soft);
 }
 
@@ -1203,7 +1198,7 @@ dialog::backdrop { background: var(--theme-shadow); }
     place-items: center;
     border: 1px solid color-mix(in srgb, var(--theme-purple-accent) 40%, transparent);
     border-radius: 11px;
-    background: linear-gradient(145deg, var(--theme-purple-strong), var(--theme-purple-icon-dark));
+    background: var(--theme-purple-strong);
     color: #f0e9fb;
     font-size: 18px;
     font-weight: 600;
