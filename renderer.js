@@ -758,9 +758,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     clearTimeout(document.timer);
-    documents.splice(index, 1);
+    try {
+      await window.electronAPI.notes.close(id);
+    } catch (error) {
+      if (document.dirty && autoSave) {
+        scheduleAutoSave(document);
+      }
+      setStatus(`Could not release note ${document.name}: ${error.message}`);
+      return false;
+    }
+    const currentIndex = documents.findIndex((openDocument) => openDocument.id === id);
+    if (currentIndex < 0) {
+      return true;
+    }
+    documents.splice(currentIndex, 1);
     if (activeId === id) { //O(1)
-      const next = documents[Math.min(index, documents.length - 1)];
+      const next = documents[Math.min(currentIndex, documents.length - 1)];
       activeId = null;
       if (next) { //O(1)
         activateDocument(next.id);

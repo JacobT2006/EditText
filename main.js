@@ -951,6 +951,18 @@ ipcMain.handle('note:new', (event) => {
   return { id: document.id, name: document.name, content: document.content, hasFile: false };
 });
 
+// [Core, all OS] Release the main-process note snapshot when its editor tab is closed.
+ipcMain.handle('note:close', (event, id) => {
+  if (typeof id !== 'string') {
+    throw new TypeError('A note ID is required to close a note.');
+  }
+  const documents = getWindowDocuments(event.sender);
+  if (!documents.delete(id)) {
+    throw new Error('This note is no longer open.');
+  }
+  return true;
+});
+
 // [Core, all OS] Open .txt notes using the OS file picker and reuse already-open files.
 ipcMain.handle('note:open', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);

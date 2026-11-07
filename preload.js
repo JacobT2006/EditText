@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   notes: {
     create: () => ipcRenderer.invoke('note:new'),
     open: () => ipcRenderer.invoke('note:open'),
+    close: (id) => ipcRenderer.invoke('note:close', id),
     save: (id, content, saveAs = false, automatic = false) =>
       ipcRenderer.invoke('note:save', { id, content, saveAs, automatic }),
     confirmClose: (name) => ipcRenderer.invoke('note:confirm-close', name),
