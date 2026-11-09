@@ -43,7 +43,9 @@
       "PLUGIN_GUIDE.md",
       "styleIndex.css",
       "Assets/**/*",
-      "package.json"
+      "package.json",
+      "!test/**",
+      "!test/**/*"
     ],
     "asar": true,
     "forceCodeSigning": false,

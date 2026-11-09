@@ -498,7 +498,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       const icon = document.createElement('img');
       icon.className = 'tab-file-icon';
-      icon.src = 'Assets/Text.svg';
+      const assetBase = window.location.pathname.includes('/test/') ? '../Assets' : 'Assets';
+      icon.src = `${assetBase}/Text.svg`;
       icon.alt = '';
       icon.setAttribute('aria-hidden', 'true');
 
