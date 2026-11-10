@@ -18,6 +18,9 @@ EditText is a desktop text editor built with Electron. It works with ordinary `.
 - [License](#license)
 
 
+![editText Image](/Users/dinokiddo2006/Projects/GitHub/EditText/imageAssetsForGithub/titleImage.png)
+
+
 <!-- - [Use EditText](#use-edittext)
   - [Keyboard shortcuts](#keyboard-shortcuts) -->
 
@@ -59,7 +62,7 @@ Use the search button in the left toolbar to find text in the current note. Sett
 | Close window | `⌘ W` | `Ctrl W` |
 | Find next / previous match | `Enter` / `Shift Enter` while search is focused | `Enter` / `Shift Enter` while search is focused | -->
 
-## Run from source
+<!-- ## Run from source
 
 You need [Node.js](https://nodejs.org/) `26.12.1` or newer and npm. From the project directory:
 
@@ -76,7 +79,7 @@ npm run build:win
 npm run build:linux
 ```
 
-NOTE: Build output is written to `dist/`. Windows builds target x64; macOS and Linux builds use the host platform's default architecture.
+NOTE: Build output is written to `dist/`. Windows builds target x64; macOS and Linux builds use the host platform's default architecture. -->
 
 ## Contributing
 
@@ -91,7 +94,7 @@ Contributions are welcome. The `main` branch is protected, so changes are submit
 | `feature/<short-name>` | New features (for example, `feature/word-count`). |
 | `fix/<short-name>` | Bug fixes (for example, `fix/save-crash`). |
 
-### Development workflow
+<!-- ### Development workflow
 
 1. Fork the repository, or clone it if you have write access.
 2. Install Node.js `26.12.1` or newer, then install dependencies and launch the app:
@@ -129,7 +132,7 @@ Contributions are welcome. The `main` branch is protected, so changes are submit
 
 6. Open a pull request with **base** set to `Dev`. Describe what changed and why, and include screenshots for UI changes.
 
-GitHub Actions runs CodeQL on pull requests targeting `main`. The release workflow also runs CodeQL before building release installers. There is no configured automated test suite yet.
+GitHub Actions runs CodeQL on pull requests targeting `main`. The release workflow also runs CodeQL before building release installers. There is no configured automated test suite yet. -->
 
 ### Review and releases
 

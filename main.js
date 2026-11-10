@@ -436,6 +436,17 @@ function createWindow() {
       sandbox: true,
     },
   });
+// [Core, all OS] Stop throttleing and keep app running for cheap resources
+  win.on('blur', () => {
+    if (!win.isDestroyed()) {
+      win.webContents.setBackgroundThrottling(true);
+    }
+  });
+  win.on('focus', () => {
+    if (!win.isDestroyed()) {
+      win.webContents.setBackgroundThrottling(false);
+    }
+  });
 
   // [Windows/Linux] Hide the native menu bar because the app draws its own Notes menu.
   if (process.platform !== 'darwin') { //O(1)
