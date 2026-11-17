@@ -275,6 +275,7 @@ body:not(.platform-macos) .control-btn.close:hover {
 
 .activity-bar button:hover:not(:disabled) { background-color: #fff; }
 .activity-bar button:disabled { cursor: default; opacity: 1; }
+/* ICON location */
 .active-activity-icon {
     background-color: #fff !important;
     border-left: 2px solid #fff !important;

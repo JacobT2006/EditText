@@ -1231,6 +1231,9 @@ autoUpdater.on('error', (error) => {
   sendUpdateStatus('error', `Update check failed: ${error.message}`);
 });
 
+
+// Test performance addition
+app.disableHardwareAcceleration()
 // [Core, all OS] Build the menu and create the initial window.
 // [macOS] Recreate a window when the app is activated after all windows close.
 app.whenReady().then(() => {
