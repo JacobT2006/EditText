@@ -76,6 +76,54 @@ function isValidPluginId(id) {
   return typeof id === 'string' && /^[a-z0-9][a-z0-9._-]{0,62}$/.test(id);
 }
 
+function validatePluginThemes(themes) {
+  if (themes === undefined) {
+    return [];
+  }
+  if (!Array.isArray(themes) || themes.length > 12) {
+    throw new TypeError('Plugin themes must be an array with no more than 12 choices.');
+  }
+  const ids = new Set();
+  return themes.map((theme) => {
+    if (
+      typeof theme?.id !== 'string'
+      || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(theme.id)
+      || ids.has(theme.id)
+      || typeof theme.name !== 'string'
+      || theme.name.trim().length === 0
+      || theme.name.length > 40
+    ) {
+      throw new TypeError('Each plugin theme needs a unique valid ID and a name of at most 40 characters.');
+    }
+    ids.add(theme.id);
+    return { id: theme.id, name: theme.name.trim() };
+  });
+}
+
+function validatePluginFileTypes(fileTypes) {
+  if (fileTypes === undefined) {
+    return [];
+  }
+  if (!Array.isArray(fileTypes) || fileTypes.length > 32) {
+    throw new TypeError('Plugin file types must be an array with no more than 32 entries.');
+  }
+  const extensions = new Set();
+  return fileTypes.map((fileType) => {
+    if (
+      typeof fileType?.extension !== 'string'
+      || !/^[a-z0-9][a-z0-9-]{0,15}$/.test(fileType.extension)
+      || extensions.has(fileType.extension)
+      || typeof fileType.name !== 'string'
+      || fileType.name.trim().length === 0
+      || fileType.name.length > 40
+    ) {
+      throw new TypeError('Each file type needs a unique extension and a name of at most 40 characters.');
+    }
+    extensions.add(fileType.extension);
+    return { extension: fileType.extension, name: fileType.name.trim() };
+  });
+}
+
 async function readPluginRegistry() {
   let contents;
   try {
@@ -102,6 +150,15 @@ async function readPluginRegistry() {
     ) {
       throw new TypeError('The installed plugin registry contains an invalid entry.');
     }
+    const themes = validatePluginThemes(plugin.themes);
+    const fileTypes = validatePluginFileTypes(plugin.fileTypes);
+    if (
+      plugin.selectedTheme !== undefined
+      && plugin.selectedTheme !== null
+      && !themes.some((theme) => theme.id === plugin.selectedTheme)
+    ) {
+      throw new TypeError('The installed plugin registry contains an invalid theme selection.');
+    }
     return {
       id: plugin.id,
       name: plugin.name,
@@ -109,6 +166,11 @@ async function readPluginRegistry() {
       description: plugin.description,
       mode: plugin.mode,
       enabled: plugin.enabled !== false,
+      themes,
+      selectedTheme: themes.length > 0
+        ? plugin.selectedTheme ?? themes[0].id
+        : null,
+      fileTypes,
     };
   });
 }
@@ -642,9 +704,35 @@ ipcMain.handle('plugins:styles', async () => {
       }
       throw error;
     }
-    stylesheets.push({ id: plugin.id, stylesheet });
+    stylesheets.push({
+      id: plugin.id,
+      stylesheet,
+      themes: plugin.themes,
+      selectedTheme: plugin.selectedTheme,
+    });
   }
   return stylesheets;
+});
+
+// [Plugins, all OS] Persist the selected theme offered by a CSS-only plugin.
+ipcMain.handle('plugins:set-theme', async (_event, id, themeId) => {
+  if (!isValidPluginId(id) || typeof themeId !== 'string') {
+    throw new TypeError('A valid plugin ID and theme selection are required.');
+  }
+  const plugins = await readPluginRegistry();
+  const pluginIndex = plugins.findIndex((installed) => installed.id === id);
+  if (pluginIndex < 0) {
+    throw new Error('This plugin is not installed.');
+  }
+  const plugin = plugins[pluginIndex];
+  if (plugin.mode !== 'ui' || !plugin.themes.some((theme) => theme.id === themeId)) {
+    throw new Error('This theme is not available for the selected plugin.');
+  }
+  const updatedPlugins = plugins.map((installed, index) => (
+    index === pluginIndex ? { ...installed, selectedTheme: themeId } : installed
+  ));
+  await writePluginRegistry(updatedPlugins);
+  return updatedPlugins[pluginIndex];
 });
 
 // [Plugins, all OS] Enable or disable a CSS-only plugin in the requesting app window.
@@ -703,6 +791,14 @@ async function installPluginArchive(archivePath, mode, win, expectedId = null) {
     ) {
       throw new TypeError('Plugin manifest must have a valid id, name, version, and description.');
     }
+    const themes = validatePluginThemes(manifest.themes);
+    const fileTypes = validatePluginFileTypes(manifest.fileTypes);
+    if (themes.length > 0 && mode !== 'ui') {
+      throw new TypeError('Theme choices are supported only by CSS styling plugins.');
+    }
+    if (fileTypes.length > 0 && mode !== 'trusted') {
+      throw new TypeError('File-type handlers require trusted-code installation.');
+    }
     if (expectedId && manifest.id !== expectedId) {
       throw new Error('The downloaded plugin ID does not match the catalog entry.');
     }
@@ -740,7 +836,9 @@ async function installPluginArchive(archivePath, mode, win, expectedId = null) {
         noLink: true,
         title: 'Trust this plugin?',
         message: `Allow ${manifest.name} to run trusted code?`,
-        detail: 'Its code can read and change the selected note and access your files, network, and app APIs. Only install plugins from authors you trust. It runs only when you choose Run with note access.',
+        detail: fileTypes.length > 0
+          ? 'This plugin can open and save files for its registered extensions and can access your files, network, and app APIs. Only install plugins from authors you trust.'
+          : 'Its code can read and change the selected note and access your files, network, and app APIs. Only install plugins from authors you trust. It runs only when you choose Run with note access.',
       });
       if (trustResult.response !== 0) {
         return { canceled: true };
@@ -750,6 +848,19 @@ async function installPluginArchive(archivePath, mode, win, expectedId = null) {
     const installedPlugins = await readPluginRegistry();
     if (installedPlugins.some((plugin) => plugin.id === manifest.id)) {
       throw new Error('A plugin with this ID is already installed. Remove it before installing another copy.');
+    }
+    if (fileTypes.length > 0) {
+      const occupiedExtensions = new Map();
+      for (const plugin of installedPlugins) {
+        for (const fileType of plugin.fileTypes) {
+          occupiedExtensions.set(fileType.extension, plugin.name);
+        }
+      }
+      for (const fileType of fileTypes) {
+        if (occupiedExtensions.has(fileType.extension)) {
+          throw new Error(`.${fileType.extension} is already handled by ${occupiedExtensions.get(fileType.extension)}.`);
+        }
+      }
     }
 
     const targetDirectory = path.join(pluginsDirectory, manifest.id);
@@ -770,6 +881,9 @@ async function installPluginArchive(archivePath, mode, win, expectedId = null) {
       description: manifest.description.trim(),
       mode,
       enabled: true,
+      themes,
+      selectedTheme: themes[0]?.id ?? null,
+      fileTypes,
     };
     try {
       await writePluginRegistry([...installedPlugins, installedPlugin]);
@@ -877,7 +991,7 @@ ipcMain.handle('plugins:open-catalog-item', async (_event, id) => {
 });
 
 // [Plugins, all OS] Run trusted plugins with explicit access to the selected note.
-ipcMain.handle('plugins:run', async (event, id, note) => {
+ipcMain.handle('plugins:run', async (event, id, note, appContext = {}) => {
   if (!isValidPluginId(id)) {
     throw new TypeError('Invalid plugin ID.');
   }
@@ -895,6 +1009,34 @@ ipcMain.handle('plugins:run', async (event, id, note) => {
   if (!document || typeof note.content !== 'string' || Buffer.byteLength(note.content, 'utf8') > 10 * 1024 * 1024) {
     throw new Error('A valid open note is required to run this plugin.');
   }
+  const openNotes = appContext?.notes;
+  const appSettings = appContext?.settings;
+  if (!Array.isArray(openNotes) || openNotes.length > 1000) {
+    throw new TypeError('The plugin app context must contain the currently open notes.');
+  }
+  if (
+    typeof appSettings?.autoSave !== 'boolean'
+    || !Number.isInteger(appSettings.autoSaveDelay)
+    || !Number.isInteger(appSettings.fontSize)
+    || typeof appSettings.wordWrap !== 'boolean'
+  ) {
+    throw new TypeError('The plugin app context contains invalid application settings.');
+  }
+  let notesSize = 0;
+  const noteSnapshots = openNotes.map((openNote) => {
+    if (
+      typeof openNote?.id !== 'string'
+      || typeof openNote.name !== 'string'
+      || typeof openNote.content !== 'string'
+    ) {
+      throw new TypeError('The plugin app context contains an invalid note.');
+    }
+    notesSize += Buffer.byteLength(openNote.content, 'utf8');
+    if (notesSize > 20 * 1024 * 1024) {
+      throw new Error('The currently open notes exceed the plugin context size limit.');
+    }
+    return { id: openNote.id, name: openNote.name, content: openNote.content };
+  });
 
   const mainPath = path.join(pluginDirectory, 'main.cjs');
   const mainStat = await fs.stat(mainPath);
@@ -913,6 +1055,16 @@ ipcMain.handle('plugins:run', async (event, id, note) => {
       id: document.id,
       name: document.name,
       content: note.content,
+    },
+    app: {
+      notes: noteSnapshots,
+      settings: { ...appSettings },
+      executeCommand: (command) => {
+        if (!appCommands.has(command)) {
+          throw new Error(`Unsupported application command: ${command}`);
+        }
+        win.webContents.send('app-command', command);
+      },
     },
   });
   if (result === undefined) {
@@ -955,6 +1107,43 @@ ipcMain.handle('plugins:open-guide', async () => {
   }
 });
 
+async function getTrustedFormatPlugins() {
+  const plugins = await readPluginRegistry();
+  return plugins.filter((plugin) => plugin.mode === 'trusted' && plugin.fileTypes.length > 0);
+}
+
+async function loadTrustedFormatModule(plugin) {
+  const mainPath = path.join(getPluginsDirectory(), plugin.id, 'main.cjs');
+  const mainStat = await fs.stat(mainPath);
+  if (!mainStat.isFile() || mainStat.size > 2 * 1024 * 1024) {
+    throw new Error(`The file handler entry for ${plugin.name} is missing or too large.`);
+  }
+  const resolvedMainPath = require.resolve(mainPath);
+  delete require.cache[resolvedMainPath];
+  const pluginModule = require(resolvedMainPath);
+  const formatHandlers = typeof pluginModule === 'function'
+    ? null
+    : pluginModule.formats ?? pluginModule;
+  if (
+    !formatHandlers
+    || typeof formatHandlers.open !== 'function'
+    || typeof formatHandlers.save !== 'function'
+  ) {
+    throw new TypeError(`${plugin.name} must export open and save file-format handlers.`);
+  }
+  return formatHandlers;
+}
+
+async function findFormatPlugin(extension) {
+  const normalizedExtension = extension.replace(/^\./, '').toLowerCase();
+  for (const plugin of await getTrustedFormatPlugins()) {
+    if (plugin.fileTypes.some((fileType) => fileType.extension === normalizedExtension)) {
+      return plugin;
+    }
+  }
+  return null;
+}
+
 // [Core, all OS] Create an unsaved note in the requesting window's note store.
 ipcMain.handle('note:new', (event) => {
   const document = { id: randomUUID(), filePath: null, name: 'Untitled.txt', content: '' };
@@ -974,17 +1163,27 @@ ipcMain.handle('note:close', (event, id) => {
   return true;
 });
 
-// [Core, all OS] Open .txt notes using the OS file picker and reuse already-open files.
+// [Core, all OS] Open text and trusted-plugin file types, converting plugin formats to editable text.
 ipcMain.handle('note:open', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) { //O(1)
     return [];
   }
 
+  const formatPlugins = await getTrustedFormatPlugins();
+  const extensionFilters = formatPlugins.flatMap((plugin) => plugin.fileTypes.map((fileType) => ({
+    name: fileType.name,
+    extensions: [fileType.extension],
+  })));
+  const supportedExtensions = ['txt', ...extensionFilters.flatMap((filter) => filter.extensions)];
   const result = await dialog.showOpenDialog(win, {
-    title: 'Open notes',
+    title: 'Open files',
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Text files', extensions: ['txt'] }],
+    filters: [
+      { name: 'Supported files', extensions: supportedExtensions },
+      { name: 'Text files', extensions: ['txt'] },
+      ...extensionFilters,
+    ],
   });
   if (result.canceled) { //O(1)
     return [];
@@ -1005,7 +1204,25 @@ ipcMain.handle('note:open', async (event) => {
       });
       continue;
     }
-    const content = await fs.readFile(filePath, 'utf8');
+    const extension = path.extname(filePath).replace(/^\./, '').toLowerCase();
+    let content;
+    if (extension === 'txt') {
+      content = await fs.readFile(filePath, 'utf8');
+    } else {
+      const plugin = await findFormatPlugin(extension);
+      if (!plugin) {
+        throw new Error(`No trusted plugin is installed for .${extension} files.`);
+      }
+      const handlers = await loadTrustedFormatModule(plugin);
+      content = await handlers.open({
+        filePath,
+        name: path.basename(filePath),
+        extension,
+      });
+      if (typeof content !== 'string') {
+        throw new TypeError(`${plugin.name} returned non-text content when opening .${extension}.`);
+      }
+    }
     const lastSavedAt = (await fs.stat(filePath)).mtime.toISOString();
     const document = {
       id: randomUUID(),
@@ -1055,25 +1272,48 @@ ipcMain.handle('note:save', async (event, {
   let filePath = document.filePath;
   if (saveAs || !filePath) { //O(1)
     const win = BrowserWindow.fromWebContents(event.sender);
+    const formatPlugins = await getTrustedFormatPlugins();
+    const extensionFilters = formatPlugins.flatMap((plugin) => plugin.fileTypes.map((fileType) => ({
+      name: fileType.name,
+      extensions: [fileType.extension],
+    })));
+    const supportedExtensions = ['txt', ...extensionFilters.flatMap((filter) => filter.extensions)];
     const result = await dialog.showSaveDialog(win, {
       title: 'Save note',
       defaultPath: document.name === 'Untitled' ? 'Untitled.txt' : document.name,
       buttonLabel: 'Save',
-      filters: [{ name: 'Text files', extensions: ['txt'] }],
+      filters: [
+        { name: 'Supported files', extensions: supportedExtensions },
+        { name: 'Text files', extensions: ['txt'] },
+        ...extensionFilters,
+      ],
     });
     if (result.canceled || !result.filePath) { //O(1)
       return { canceled: true };
     }
-    filePath = path.extname(result.filePath)
-      ? result.filePath
-      : `${result.filePath}.txt`;
+    filePath = path.extname(result.filePath) ? result.filePath : `${result.filePath}.txt`;
   }
 
   if ([...documents.values()].some((openDocument) => openDocument.id !== id && openDocument.filePath === filePath)) {  //O(1)
     throw new Error('That note is already open in another tab.');
   }
 
-  await fs.writeFile(filePath, content, 'utf8');
+  const extension = path.extname(filePath).replace(/^\./, '').toLowerCase();
+  if (extension === 'txt') {
+    await fs.writeFile(filePath, content, 'utf8');
+  } else {
+    const plugin = await findFormatPlugin(extension);
+    if (!plugin) {
+      throw new Error(`No trusted plugin is installed for .${extension} files.`);
+    }
+    const handlers = await loadTrustedFormatModule(plugin);
+    await handlers.save({
+      filePath,
+      name: path.basename(filePath),
+      extension,
+      content,
+    });
+  }
   const lastSavedAt = (await fs.stat(filePath)).mtime.toISOString();
   document.filePath = filePath;
   document.name = path.basename(filePath);

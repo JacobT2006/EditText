@@ -1,4 +1,4 @@
-// [Optional, all OS] Fuse.js is reserved for fuzzy search; current note search uses exact text matches.
+// [Search, all OS] Fuse.js scores note lines so small typos can still find relevant text.
 import Fuse from './node_modules/fuse.js/dist/fuse.mjs';
 
 // [Platform UI, all OS] Add platform classes; macOS uses native chrome while Windows/Linux use custom controls.
@@ -36,6 +36,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const pluginStyles = document.createElement('style');
   pluginStyles.id = 'plugin-styles';
   document.head.append(pluginStyles);
+  const themedPlugins = new Set();
   const pluginStoreGrid = document.getElementById('plugin-store-grid');
   const pluginStoreStatus = document.getElementById('plugin-store-status');
   const pluginStoreSearch = document.getElementById('plugin-store-search');
@@ -148,6 +149,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   async function refreshPluginStyles() {
     const stylesheets = await window.electronAPI.plugins.styles();
+    for (const id of themedPlugins) {
+      document.documentElement.removeAttribute(`data-plugin-theme-${id}`);
+    }
+    themedPlugins.clear();
+    for (const plugin of stylesheets) {
+      if (plugin.selectedTheme) {
+        document.documentElement.setAttribute(`data-plugin-theme-${plugin.id}`, plugin.selectedTheme);
+        themedPlugins.add(plugin.id);
+      }
+    }
     pluginStyles.textContent = stylesheets
       .map(({ stylesheet }) => stylesheet)
       .join('\n');
@@ -181,6 +192,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         const actions = document.createElement('div');
         actions.className = 'plugin-card-actions';
         if (plugin.mode === 'ui') {
+          if (plugin.themes?.length > 0) {
+            const themeLabel = document.createElement('label');
+            themeLabel.className = 'plugin-theme-picker';
+            const themeLabelText = document.createElement('span');
+            themeLabelText.textContent = 'Theme';
+            const themeSelect = document.createElement('select');
+            themeSelect.setAttribute('aria-label', `${plugin.name} theme`);
+            for (const theme of plugin.themes) {
+              const option = document.createElement('option');
+              option.value = theme.id;
+              option.textContent = theme.name;
+              themeSelect.append(option);
+            }
+            themeSelect.value = plugin.selectedTheme;
+            themeSelect.addEventListener('change', async () => {
+              const previousTheme = plugin.selectedTheme;
+              themeSelect.disabled = true;
+              try {
+                await window.electronAPI.plugins.setTheme(plugin.id, themeSelect.value);
+                await refreshPluginStyles();
+                await renderPlugins();
+                pluginsStatus.textContent = `${plugin.name} theme changed.`;
+              } catch (error) {
+                themeSelect.value = previousTheme;
+                pluginsStatus.textContent = `Could not change ${plugin.name} theme: ${error.message}`;
+              } finally {
+                themeSelect.disabled = false;
+              }
+            });
+            themeLabel.append(themeLabelText, themeSelect);
+            actions.append(themeLabel);
+          }
           const toggleButton = document.createElement('button');
           toggleButton.type = 'button';
           toggleButton.textContent = plugin.needsUpdate
@@ -206,9 +249,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             const note = activeDocument();
             pluginsStatus.textContent = `Running ${plugin.name}…`;
             try {
+              const settings = await window.electronAPI.settings.get();
               const result = await window.electronAPI.plugins.run(
                 plugin.id,
                 note ? { id: note.id, content: note.content } : null,
+                {
+                  notes: documents.map(({ id, name, content }) => ({ id, name, content })),
+                  settings,
+                },
               );
               if (typeof result.content === 'string') {
                 const currentNote = activeDocument();
@@ -851,27 +899,49 @@ window.addEventListener('DOMContentLoaded', async () => {
     }, autoSaveDelay);
   }
 
-  // [Core, all OS] Find the next or previous exact-text match in the active note.
+  // [Search, all OS] Find the next or previous fuzzy match in the active note.
   function search(direction = 1) {
     const query = searchInput.value;
     if (!query) { //O(1)
       return;
     }
-    const start = direction > 0 ? editor.selectionEnd : editor.selectionStart - 1;
-    let index = direction > 0
-      ? editor.value.indexOf(query, Math.max(0, start))
-      : editor.value.lastIndexOf(query, start);
-    if (index < 0) { //O(1)
-      index = direction > 0
-        ? editor.value.indexOf(query)
-        : editor.value.lastIndexOf(query);
+    const lines = editor.value.split('\n');
+    const lineOffsets = [];
+    let offset = 0;
+    for (const line of lines) {
+      lineOffsets.push(offset);
+      offset += line.length + 1;
     }
-    if (index < 0) { //O(1)
+    const matches = new Fuse(lines, {
+      includeMatches: true,
+      ignoreLocation: true,
+      threshold: 0.38,
+      minMatchCharLength: 1,
+    }).search(query)
+      .map((result) => {
+        const range = result.matches?.[0]?.indices?.[0];
+        if (!range) return null;
+        return {
+          start: lineOffsets[result.refIndex] + range[0],
+          end: lineOffsets[result.refIndex] + range[1] + 1,
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => left.start - right.start);
+    if (matches.length === 0) {
       setStatus(`No match for “${query}”`);
       return;
     }
+
+    const cursor = direction > 0 ? editor.selectionEnd : editor.selectionStart;
+    let match = direction > 0
+      ? matches.find((candidate) => candidate.start >= cursor)
+      : [...matches].reverse().find((candidate) => candidate.start < cursor);
+    if (!match) {
+      match = direction > 0 ? matches[0] : matches[matches.length - 1];
+    }
     editor.focus();
-    editor.setSelectionRange(index, index + query.length);
+    editor.setSelectionRange(match.start, match.end);
     setStatus('');
   }
 
@@ -1001,7 +1071,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     clearTabDrag();
   });
 
-  // [Core, all OS] Connect exact-text search and the in-window Notes menu.
+  // [Core, all OS] Connect note search and the in-window Notes menu.
   document.getElementById('find-note').addEventListener('click', () => {
     searchBar.hidden = false;
     searchInput.focus();

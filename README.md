@@ -28,11 +28,12 @@ EditText is a desktop text editor built with Electron. It works with ordinary `.
 
 - Create, open, and edit multiple plain-text notes in one window.
 - Save notes to a chosen location, or enable auto-save for notes that already have a file.
-- Search within the current note and move between matches.
+- Fuzzy-search within the current note, including small typos, and move between matches.
 - Reorder open notes and resize the notes explorer.
 - Adjust auto-save timing, text size, and line wrapping in Settings.
 - Check for and install app updates from Settings.
-- Browse GitHub-hosted community plugins in an in-app store, with CSS-only UI styling or explicitly trusted note-processing modes.
+- Browse GitHub-hosted community plugins in an in-app store, with selectable CSS-only theme presets or explicitly trusted note-processing modes.
+- Trusted plugins can add support for additional file extensions and convert them to editable text.
 - Available for macOS, Windows, and Linux.
 
 See the [plugin creation walkthrough](PLUGIN_GUIDE.md) for plugin package formats, permissions, installation, and community submissions.

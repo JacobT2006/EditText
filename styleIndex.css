@@ -1023,6 +1023,23 @@ dialog::backdrop { background: var(--theme-shadow); }
     gap: 6px;
 }
 
+.plugin-theme-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #aaa;
+    font-size: 11px;
+}
+
+.plugin-theme-picker select {
+    max-width: 130px;
+    padding: 6px;
+    border: 1px solid var(--theme-border);
+    border-radius: 3px;
+    background: var(--theme-chrome-background);
+    color: #eee;
+}
+
 .plugins-actions button,
 .plugin-card-actions button {
     padding: 6px 9px;

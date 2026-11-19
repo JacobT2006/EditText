@@ -48,6 +48,40 @@ textarea {
 
 UI plugins are CSS-only: JavaScript, HTML, and external resources are not accepted. The app rejects CSS `@import` and `url(...)` resources, and its content security policy blocks network access. CSS can change the look and arrangement of app UI, but cannot read or change note text.
 
+To offer selectable theme presets, add a `themes` array to the manifest. Each choice needs a unique lowercase ID and a display name. The app shows a picker for the plugin in **Settings → Plugins**, persists the selection, and sets a `data-plugin-theme-<plugin-id>` attribute on the document root. Scope each preset's CSS to its corresponding attribute:
+
+```json
+{
+  "id": "theme-picker",
+  "name": "Theme Picker",
+  "version": "1.0.0",
+  "description": "Choose a color theme for EditText.",
+  "themes": [
+    { "id": "ocean", "name": "Ocean" },
+    { "id": "forest", "name": "Forest" }
+  ]
+}
+```
+
+```css
+html[data-plugin-theme-theme-picker="ocean"] {
+  --theme-app-background: #17212b;
+  --theme-chrome-background: #111a23;
+  --theme-surface-background: #1d2b37;
+  --theme-editor-background: #17212b;
+  --theme-purple-strong: #287c9e;
+  --theme-purple-border: #3499ba;
+  --theme-purple-accent: #65bfdc;
+  --theme-purple-light: #9bdcf0;
+  --theme-purple-selected: #234b60;
+  --theme-purple-chip: #202c35;
+  --theme-purple-muted: #a9c9d4;
+  color-scheme: dark;
+}
+```
+
+Theme IDs must start with a lowercase letter or digit and contain only lowercase letters, digits, or hyphens; names are limited to 40 characters, and a plugin may offer up to 12 choices. The selection control is available only for CSS styling plugins.
+
 ### Trusted code plugin
 
 Add `main.cjs` beside `manifest.json`:
@@ -63,9 +97,57 @@ module.exports = async ({ note }) => {
 };
 ```
 
-The plugin receives a snapshot of the active note as `{ id, name, content }`. It may return a string to replace the note text, or return nothing to make no change. The user must have an active note open. The app marks returned text as an edit; the user's normal save and auto-save settings still apply.
+The plugin receives `{ note, app }`. `note` is a snapshot of the active note as `{ id, name, content }`. `app.notes` is a read-only snapshot array of all currently open notes in the same window, and `app.settings` is a read-only snapshot of the current preferences. `app.executeCommand(command)` can ask EditText to run one of its existing commands: `new`, `open`, `save`, `save-as`, `toggle-auto-save`, `settings`, or `close-window`.
+
+Return a string to replace the active note's text, or return nothing to make no change. The user must have an active note open to run a trusted plugin. The app marks returned text as an edit; the user's normal save and auto-save settings still apply. For example:
+
+```js
+module.exports = async ({ note, app }) => {
+  const openNoteNames = app.notes.map((openNote) => openNote.name);
+  console.log(`There are ${openNoteNames.length} open notes.`);
+  console.log(`Auto-save is ${app.settings.autoSave ? 'on' : 'off'}.`);
+  return note.content;
+};
+```
+
+`app.executeCommand()` dispatches a supported command to EditText's UI; it does not wait for a dialog or command to finish. Trusted plugins still run with Node.js privileges, so they can also access files and the network. Only install code you trust.
 
 Trusted code runs with Node.js privileges in the app process. It can read or write files, access the network, and call app APIs. Keep code small, explain its behavior, and never install it unless you trust its author.
+
+#### Add support for another file type
+
+A trusted plugin can register file extensions and provide `open` and `save` functions in `main.cjs`. The app adds the extensions to the Open and Save dialogs, converts opened files to text for the editor, and asks the plugin to encode saved text back into the original format.
+
+Add `fileTypes` to the manifest:
+
+```json
+{
+  "id": "markdown-support",
+  "name": "Markdown Support",
+  "version": "1.0.0",
+  "description": "Open and save Markdown files.",
+  "fileTypes": [
+    { "extension": "md", "name": "Markdown document" }
+  ]
+}
+```
+
+Export both handlers from `main.cjs`:
+
+```js
+const fs = require('node:fs/promises');
+
+module.exports = {
+  async open({ filePath }) {
+    return fs.readFile(filePath, 'utf8');
+  },
+  async save({ filePath, content }) {
+    await fs.writeFile(filePath, content, 'utf8');
+  },
+};
+```
+
+The handler context includes `filePath`, `name`, `extension`, and `content` for `save`. The `open` handler must return a string. File extensions must contain lowercase letters, digits, or hyphens, start with a letter or digit, and be unique across installed plugins. Plugins can use Node.js libraries to decode and encode binary formats such as `.docx`, but must not claim an extension already handled by another plugin.
 
 ## 3. Package and install
 
