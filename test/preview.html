@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EditText</title>
+    <link rel="stylesheet" href="../styleIndex.css?cacheBust=1">
+</head>
+<body>
+    <script src="./preview.js?cacheBust=1"></script>
+    <div class="app">
+        <!-- [Platform UI] macOS uses native traffic lights/menu; Windows/Linux show custom controls and the in-app Notes menu. -->
+        <header class="title-bar" title="Application title bar">
+            <span class="title" title="Plain-text notes app">EditText</span>
+            <div class="window-controls">
+                <button id="close-btn" class="control-btn close" type="button" aria-label="Close window" title="Close current window"></button>
+                <button id="minimize-btn" class="control-btn minimize" type="button" aria-label="Minimize window" title="Minimize current window"></button>
+                <button id="maximize-btn" class="control-btn maximize" type="button" data-maximize-action="expand" aria-label="Expand window" title="Expand window"></button>
+            </div>
+            <div class="file-menu">
+                <button id="file-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open Notes menu" title="Open Notes menu">Notes</button>
+                <div id="file-menu" class="file-menu-items" hidden>
+                    <button type="button" data-command="new" title="Create a new note">New Note <span>⌘/Ctrl+N</span></button>
+                    <button type="button" data-command="open" title="Open existing text notes">Open Notes… <span>⌘/Ctrl+O</span></button>
+                    <hr>
+                    <button id="menu-auto-save" type="button" role="menuitemcheckbox" aria-checked="false" data-command="toggle-auto-save" title="Toggle automatic saving for notes">
+                        <span>Auto Save Notes</span>
+                        <span class="menu-check" aria-hidden="true">✓</span>
+                    </button>
+                    <hr>
+                    <button type="button" data-command="save" title="Save current note">Save Note <span>⌘/Ctrl+S</span></button>
+                    <button type="button" data-command="save-as" title="Save the note to another location">Save Note As… <span>⌘/Ctrl+Shift+S</span></button>
+                    <hr>
+                    <button type="button" data-command="close-window" title="Close current window">Close Window <span>⌘/Ctrl+W</span></button>
+                </div>
+            </div>
+        </header>
+
+        <!-- [Core, all OS] Shared note actions, open-note list, Timeline, and editor. -->
+        <div class="workspace">
+            <nav class="activity-bar" aria-label="Actions" title="Quick note actions">
+                <button class="active-activity-icon" type="button" aria-label="Notes explorer" title="Notes explorer" disabled></button>
+                <button class="activity-icon three" id="new-note" type="button" aria-label="New note" title="Create a new note"></button>
+                <button class="activity-icon one" id="find-note" type="button" aria-label="Find in note" title="Find text in the current note"></button>
+                <button class="activity-icon open-file" id="open-file" type="button" aria-label="Open note" title="Open a text note"></button>
+                <button class="activity-icon plugins" id="open-plugins" type="button" aria-label="Extension store" title="Browse community extensions"></button>
+                <button class="activity-icon settings" id="open-settings" type="button" aria-label="Settings" title="Open settings"></button>
+                <button class="activity-icon two" id="quitButton" type="button" aria-label="Close window" title="Close current window"></button>
+            </nav>
+
+            <aside class="explorer" aria-label="Explorer" title="Open notes and history">
+                <div class="explorer-title" title="Browse open notes">EXPLORER</div>
+                <!-- [Core UI, all OS] Open-note tabs scroll independently from the fixed Timeline. -->
+                <details class="explorer-section open-editors-section" open title="Manage open notes">
+                    <summary class="section-heading" title="Show or hide open notes">
+                        <span>OPEN NOTES</span>
+                    </summary>
+                    <div class="open-editors-content" title="Scroll through open notes">
+                        <div id="tabs" role="tablist" aria-label="Open notes" title="Select or reorder open notes"></div>
+                        <p id="empty-editors" title="Open or create a note">No notes open</p>
+                    </div>
+                </details>
+                <div class="explorer-bottom">
+                    <details id="timeline" open title="See when this note was last saved">
+                        <summary title="Show when this note was last saved">TIMELINE</summary>
+                        <div class="timeline-content">
+                            <time id="timeline-last-saved" title="When this note was last saved">Last saved: Not saved yet</time>
+                        </div>
+                    </details>
+                </div>
+            </aside>
+            <div id="explorer-resizer" class="explorer-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Explorer" aria-valuemin="190" aria-valuemax="480" aria-valuenow="240" tabindex="0" title="Drag to resize Explorer"></div>
+
+            <main class="editor" aria-label="Notes editor" title="Write and edit the current note">
+                <!-- [Core, all OS] Current-note metadata and exact-text search controls. -->
+                <div class="editor-toolbar" title="Current note details">
+                    <div class="breadcrumbs" title="Current note">
+                        <span id="breadcrumb-name" title="Current note name">Untitled</span>
+                        <span class="breadcrumb-chevron" title="Note location">›</span>
+                        <span id="breadcrumb-kind" title="Current note type">Text Note</span>
+                    </div>
+                </div>
+                <!-- [Core, all OS] Search the active note and navigate between matching text. -->
+                <div id="search-bar" class="search-bar" hidden title="Search current note">
+                    <input id="search-input" type="search" placeholder="Find in this note" aria-label="Find in this note" title="Find text in note">
+                    <button id="find-previous" type="button" aria-label="Previous match" title="Find previous match">↑</button>
+                    <button id="find-next" type="button" aria-label="Next match" title="Find next match">↓</button>
+                    <button id="close-search" type="button" aria-label="Close search" title="Close search bar"></button>
+                </div>
+                <textarea id="note-content" aria-label="Note contents" title="Edit current note" placeholder="Start writing, or open a .txt note." spellcheck="false"></textarea>
+                <!-- [Core, all OS] Show save state, cursor position, encoding, line endings, and format. -->
+                <footer class="status-bar" title="Note status">
+                    <span id="status" role="status" aria-live="polite" title="Note and save messages">Ready</span>
+                    <span id="cursor-position" title="Current cursor position">Ln 1, Col 1</span>
+                    <span title="Text encoding">UTF-8</span>
+                    <span title="Line ending format">LF</span>
+                    <span title="Current note format">Plain Text</span>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- [Core, all OS] Configure app preferences and plugin permissions in separate Settings tabs. -->
+    <dialog id="settings-dialog" aria-labelledby="settings-title" aria-describedby="settings-description" title="Application preferences">
+        <form method="dialog" class="settings-form" title="Change and save preferences">
+            <span class="settings-eyebrow">EDITTEXT PREFERENCES</span>
+            <h2 id="settings-title" title="Application preferences">Settings</h2>
+            <p id="settings-description" class="settings-intro">Manage application preferences and plugin permissions.</p>
+            <nav class="settings-tabs" role="tablist" aria-label="Settings categories">
+                <button id="settings-general-tab" class="settings-tab selected" type="button" role="tab" aria-selected="true" aria-controls="settings-general-panel">General</button>
+                <button id="settings-plugins-tab" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-plugins-panel">Plugins</button>
+            </nav>
+            <div id="settings-general-panel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settings-general-tab">
+            <section class="settings-section" aria-labelledby="editing-settings-title" title="Note editing preferences">
+                <h3 id="editing-settings-title" title="Text note options">Notes</h3>
+                <label class="setting-row" for="auto-save">
+                    <span class="setting-copy">
+                        <span class="setting-name">Auto-save notes</span>
+                        <span class="setting-description">Save opened notes automatically.</span>
+                    </span>
+                    <input id="auto-save" type="checkbox" title="Save opened notes automatically">
+                </label>
+                <label class="setting-row setting-select-row" for="auto-save-delay">
+                    <span class="setting-copy">
+                        <span class="setting-name">Auto-save delay</span>
+                        <span class="setting-description">Wait before saving changes.</span>
+                    </span>
+                    <select id="auto-save-delay" title="Choose auto-save delay">
+                        <option value="500" title="Save after 0.5 seconds">0.5 seconds</option>
+                        <option value="800" title="Save after 0.8 seconds">0.8 seconds</option>
+                        <option value="1500" title="Save after 1.5 seconds">1.5 seconds</option>
+                        <option value="3000" title="Save after 3 seconds">3 seconds</option>
+                        <option value="5000" title="Save after 5 seconds">5 seconds</option>
+                    </select>
+                </label>
+                <label class="setting-row setting-select-row" for="font-size">
+                    <span class="setting-copy">
+                        <span class="setting-name">Note text size</span>
+                        <span class="setting-description">Enter a size from 6 to 72 pixels.</span>
+                    </span>
+                    <input id="font-size" type="number" min="6" max="72" step="1" required title="Enter note text size in pixels" aria-label="Note text size in pixels">
+                </label>
+                <label class="setting-row" for="word-wrap">
+                    <span class="setting-copy">
+                        <span class="setting-name">Wrap long lines</span>
+                        <span class="setting-description">Wrap long lines in the note.</span>
+                    </span>
+                    <input id="word-wrap" type="checkbox" title="Wrap long note lines">
+                </label>
+            </section>
+            <section class="settings-section update-settings" aria-labelledby="update-settings-title">
+                <h3 id="update-settings-title">Software updates</h3>
+                <div class="update-row">
+                    <span id="update-status" class="setting-description" role="status" aria-live="polite">Check GitHub for a newer release.</span>
+                    <button id="check-updates" class="secondary" type="button">Check for updates</button>
+                </div>
+            </section>
+            </div>
+            <div id="settings-plugins-panel" class="settings-tab-panel plugin-settings-panel" role="tabpanel" aria-labelledby="settings-plugins-tab" hidden>
+                <section class="settings-section" aria-labelledby="plugin-permissions-title">
+                    <h3 id="plugin-permissions-title">Install permission</h3>
+                    <label class="plugin-install-mode" for="plugin-install-mode">
+                        <span class="setting-copy">
+                            <span class="setting-name">Choose access for the next plugin</span>
+                            <span class="setting-description">This only applies to the next ZIP you install.</span>
+                        </span>
+                        <select id="plugin-install-mode">
+                            <option value="ui">UI styling and layout (no note access)</option>
+                            <option value="trusted">Trusted code (note and system access)</option>
+                        </select>
+                    </label>
+                    <p id="plugin-mode-description" class="plugin-mode-description">
+                        UI plugins use CSS only to change EditText’s appearance and layout. They cannot run code, read note text, access app APIs, or make network requests.
+                    </p>
+                    <p id="plugin-trust-warning" class="plugin-trust-warning" hidden>
+                        Trusted plugins run arbitrary code with access to note text, app APIs, your files, and the network. Install only code from authors you trust.
+                    </p>
+                </section>
+                <section class="settings-section installed-plugins-section" aria-labelledby="installed-plugins-title">
+                    <h3 id="installed-plugins-title">Installed plugins</h3>
+                    <div id="plugin-list" class="plugin-list" aria-live="polite"></div>
+                </section>
+                <p id="plugins-status" class="plugins-status" role="status" aria-live="polite"></p>
+                <footer class="plugins-actions">
+                    <button id="plugin-guide" class="secondary" type="button">Create a plugin</button>
+                    <button id="browse-plugin-store" class="secondary" type="button">Browse extensions</button>
+                    <button id="plugin-submissions" class="secondary" type="button">Community plugins</button>
+                    <button id="install-plugin" type="button">Install ZIP…</button>
+                </footer>
+            </div>
+            <div class="dialog-actions">
+                <button type="submit" value="cancel" class="secondary" title="Discard settings changes">Cancel</button>
+                <button id="save-settings" type="submit" value="save" title="Save app settings">Save settings</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="plugin-store-dialog" class="plugin-store-dialog" aria-labelledby="plugin-store-title">
+        <section class="plugin-store">
+            <header class="plugin-store-header">
+                <div>
+                    <span class="plugin-store-eyebrow">EDITTEXT COMMUNITY MODS</span>
+                    <h2 id="plugin-store-title">Extension Store</h2>
+                    <p>Discover community-made themes and tools for EditText.</p>
+                </div>
+                <button id="close-plugin-store" class="plugins-close" type="button" aria-label="Close extension store">×</button>
+            </header>
+            <div class="plugin-store-toolbar">
+                <label class="plugin-store-search">
+                    <span class="visually-hidden">Search extensions</span>
+                    <input id="plugin-store-search" type="search" placeholder="Search extensions…" autocomplete="off">
+                </label>
+                <button id="refresh-plugin-store" class="secondary" type="button">Refresh</button>
+            </div>
+            <nav id="plugin-store-categories" class="plugin-store-categories" aria-label="Filter extensions"></nav>
+            <div id="plugin-store-grid" class="plugin-store-grid" aria-live="polite"></div>
+            <p id="plugin-store-status" class="plugin-store-status" role="status" aria-live="polite"></p>
+            <footer class="plugin-store-footer">
+                <span>Catalog and downloads are provided by GitHub.</span>
+                <button id="store-manage-plugins" class="secondary" type="button">Manage installed plugins</button>
+            </footer>
+        </section>
+    </dialog>
+
+    <script type="module" src="../renderer.js?cacheBust=1"></script>
+</body>
+</html>

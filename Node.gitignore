@@ -1,3 +1,4 @@
+# Development-only ignore rules; these patterns do not affect runtime or packaged app behavior.
 # Logs
 logs
 *.log

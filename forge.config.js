@@ -1,3 +1,5 @@
+// [Legacy build config] The current package.json scripts use electron-builder, not Electron Forge.
+// Keep in sync or remove this file if Electron Forge is reintroduced as the project build tool.
 module.exports = {
     packagerConfig: {
       // Configuration for electron-packager

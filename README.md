@@ -6,9 +6,12 @@
 
 EditText is a desktop text editor built with Electron. It works with ordinary `.txt` files, so your notes stay SAVED!
 
+![EditText main window](https://raw.githubusercontent.com/JacobT2006/EditText/Dev/imageAssetsForGithub/titleImage.png)
+
 ## Table of Contents
 
 - [Features](#features)
+- [Wiki](#wiki)
 - [Install](#install)
 - [Run from source](#run-from-source)
 - [Contributing](#contributing)
@@ -25,11 +28,19 @@ EditText is a desktop text editor built with Electron. It works with ordinary `.
 
 - Create, open, and edit multiple plain-text notes in one window.
 - Save notes to a chosen location, or enable auto-save for notes that already have a file.
-- Search within the current note and move between matches.
+- Fuzzy-search within the current note, including small typos, and move between matches.
 - Reorder open notes and resize the notes explorer.
 - Adjust auto-save timing, text size, and line wrapping in Settings.
 - Check for and install app updates from Settings.
+- Browse GitHub-hosted community plugins in an in-app store, with selectable CSS-only theme presets or explicitly trusted note-processing modes.
+- Trusted plugins can add support for additional file extensions and convert them to editable text.
 - Available for macOS, Windows, and Linux.
+
+See the [plugin creation walkthrough](PLUGIN_GUIDE.md) for plugin package formats, permissions, installation, and community submissions.
+
+## Wiki
+
+Browse user guides in the [EditText GitHub Wiki](https://github.com/JacobT2006/EditText/wiki).
 
 ## Install
 
@@ -39,11 +50,7 @@ Download the latest release from the [EditText Releases page](https://github.com
 - **Windows:** Run the `-setup.exe` installer and follow its prompts.
 - **Linux:** Download the `.AppImage`, make it executable if needed, and run it.
 
-<!-- ## Use EditText
-
-Choose **New Note** to start writing, or **Open Notes…** to open one or more `.txt` files. Select a note in the Explorer to switch between open notes. Use **Save Note** or **Save Note As…** to save your work. Auto-save is on by default for notes with a file location; change it from the Notes menu or Settings.
-
-Use the search button in the left toolbar to find text in the current note. Settings also let you change the auto-save delay, note text size, and line wrapping. The Timeline shows when the current note was last saved.
+ ## Use EditText
 
 ### Keyboard shortcuts
 
@@ -54,11 +61,11 @@ Use the search button in the left toolbar to find text in the current note. Sett
 | Save note | `⌘ S` | `Ctrl S` |
 | Save note as | `⌘ Shift S` | `Ctrl Shift S` |
 | Close window | `⌘ W` | `Ctrl W` |
-| Find next / previous match | `Enter` / `Shift Enter` while search is focused | `Enter` / `Shift Enter` while search is focused | -->
+| Find next / previous match | `Enter` / `Shift Enter` while search is focused | `Enter` / `Shift Enter` while search is focused | 
 
-## Run from source
+<!-- ## Run from source
 
-You need [Node.js](https://nodejs.org/) `26.10.0` or newer and npm. From the project directory:
+You need [Node.js](https://nodejs.org/) `26.12.1` or newer and npm. From the project directory:
 
 ```bash
 npm ci
@@ -73,7 +80,7 @@ npm run build:win
 npm run build:linux
 ```
 
-NOTE: Build output is written to `dist/`. Windows builds target x64; macOS and Linux builds use the host platform's default architecture.
+NOTE: Build output is written to `dist/`. Windows builds target x64; macOS and Linux builds use the host platform's default architecture. -->
 
 ## Contributing
 
@@ -88,10 +95,10 @@ Contributions are welcome. The `main` branch is protected, so changes are submit
 | `feature/<short-name>` | New features (for example, `feature/word-count`). |
 | `fix/<short-name>` | Bug fixes (for example, `fix/save-crash`). |
 
-### Development workflow
+ ### Development workflow
 
 1. Fork the repository, or clone it if you have write access.
-2. Install Node.js `26.10.0` or newer, then install dependencies and launch the app:
+2. Install Node.js `26.12.1` or newer, then install dependencies and launch the app:
 
    ```bash
    git clone https://github.com/<your-username>/EditText.git
@@ -130,9 +137,9 @@ GitHub Actions runs CodeQL on pull requests targeting `main`. The release workfl
 
 ### Review and releases
 
-Maintainers review and merge changes into `Dev`. To promote changes, maintainers open a pull request from `Dev` into `main`. The `main` branch requires one approving review, code owner review, passing required checks, and signed commits; use **Squash and merge** so GitHub signs the resulting commit.
+Maintainer (JacobT2006) will merge changes from `Dev`. To promote changes, maintainers open a pull request from `Dev` into `main`. The `main` branch requires one approving review, code owner review, passing required checks, and signed commits; use **Squash and merge** so GitHub signs the resulting commit.
 
-Maintainers create releases from the **Actions** tab on the default branch by running the **Release** workflow and choosing a patch, minor, or major version bump. The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
+Maintainers create releases from the **Actions** tab by running the **Release** workflow and selecting a channel. Run `stable` from `main` (the default branch), or run `alpha`/`beta` from `Dev`. The workflow infers the version bump from commits since the latest stable tag: Conventional Commit `feat` messages select a minor bump, `fix` and `perf` select a patch bump, and `!` or a `BREAKING CHANGE:` footer selects a major bump. Common title prefixes such as `Add` and `Fix` are also recognized; if no commit indicates a larger change, a manually requested release defaults to patch. Prerelease numbers increment independently per channel (for example, `1.2.0-alpha.0`). The workflow builds macOS, Windows, and Linux installers and publishes them to the [Releases page](https://github.com/JacobT2006/EditText/releases).
 
 Release builds are unsigned and do not require certificates, notarization keys, or signing-related GitHub secrets. macOS and Windows may show security warnings for unsigned apps; users may need to explicitly allow the app to open or install it.
 
